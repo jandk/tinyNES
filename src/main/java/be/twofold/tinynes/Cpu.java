@@ -193,14 +193,11 @@ public final class Cpu {
         status = 0x34;
     }
 
-    private void incPC() {
-        pc = (pc + 1) & 0xFFFF;
-    }
-
     // region Decoder
 
     private void execute(int opcode) {
         switch (opcode) {
+            // Standard Opcodes
             case 0x00 -> brk(imp());
             case 0x01 -> ora(izx());
             case 0x05 -> ora(zp0());
@@ -352,7 +349,9 @@ public final class Cpu {
             case 0xF9 -> sbc(aby());
             case 0xFD -> sbc(abx());
             case 0xFE -> inc(abx());
-            default -> xxx();
+
+            default ->
+                throw new IllegalArgumentException(String.format("Invalid opcode 0x%02X at 0x%04X", opcode, pc - 1));
         }
     }
 
@@ -441,70 +440,55 @@ public final class Cpu {
     private void adc(int address) {
         int v1 = a;
         int v2 = read(address);
-        int result = v1 + v2 + (getC() ? 1 : 0);
-        a = result & 0xff;
-        setC(result > 0xff);
-        setZ(a == 0);
-        setV(((v1 ^ result) & (v2 ^ result) & 0x80) != 0);
-        setN((a & 0x80) != 0);
+        int t = v1 + v2 + (getC() ? 1 : 0);
+        a = t & 0xff;
+        setC(t > 0xff);
+        setV(((v1 ^ t) & (v2 ^ t) & 0x80) != 0);
+        setZN(a);
     }
 
     private void and(int address) {
         a &= read(address);
-        setZ(a == 0);
-        setN((a & 0x80) != 0);
+        setZN(a);
     }
 
     private void asl(int address) {
         int f = read(address);
         setC((f & 0x80) != 0);
         int t = (f << 1) & 0xff;
-        setZ(t == 0);
-        setN((t & 0x80) != 0);
+        setZN(t);
         write(address, t);
     }
 
     private void bcc(int address) {
-        if (!getC()) {
-            pc = address;
-        }
+        branch(!getC(), address);
     }
 
     private void bcs(int address) {
-        if (getC()) {
-            pc = address;
-        }
+        branch(getC(), address);
     }
 
     private void beq(int address) {
-        if (getZ()) {
-            pc = address;
-        }
+        branch(getZ(), address);
     }
 
     private void bit(int address) {
-        int temp = read(address);
-        setZ((a & temp) == 0);
-        setN((temp & 0x80) != 0);
-        setV((temp & 0x40) != 0);
+        int f = read(address);
+        setZ((a & f) == 0);
+        setN((f & 0x80) != 0);
+        setV((f & 0x40) != 0);
     }
 
     private void bmi(int address) {
-        if (getN()) {
-            pc = address;
-        }
+        branch(getN(), address);
     }
 
     private void bne(int address) {
-        if (!getZ()) {
-            pc = address;
-        }
+        branch(!getZ(), address);
     }
 
     private void bpl(int address) {
-        if (!getN()) {
-            pc = address;
-        }
+        branch(!getN(), address);
     }
 
     private void brk(int address) {
@@ -512,15 +496,11 @@ public final class Cpu {
     }
 
     private void bvc(int address) {
-        if (!getV()) {
-            pc = address;
-        }
+        branch(!getV(), address);
     }
 
     private void bvs(int address) {
-        if (getV()) {
-            pc = address;
-        }
+        branch(getV(), address);
     }
 
     private void clc(int address) {
@@ -543,70 +523,60 @@ public final class Cpu {
         int f = read(address);
         int t = a - f;
         setC(a >= f);
-        setZ(t == 0);
-        setN((t & 0x80) != 0);
+        setZN(t);
     }
 
     private void cpx(int address) {
         int f = read(address);
         int t = x - f;
         setC(x >= f);
-        setZ(t == 0);
-        setN((t & 0x80) != 0);
+        setZN(t);
     }
 
     private void cpy(int address) {
         int f = read(address);
         int t = y - f;
         setC(y >= f);
-        setZ(t == 0);
-        setN((t & 0x80) != 0);
+        setZN(t);
     }
 
     private void dec(int address) {
         int f = read(address);
         int t = (f - 1) & 0xff;
-        setZ(t == 0);
-        setN((t & 0x80) != 0);
+        setZN(t);
         write(address, t);
     }
 
     private void dex(int address) {
         x = (x - 1) & 0xff;
-        setZ(x == 0);
-        setN((x & 0x80) != 0);
+        setZN(x);
     }
 
     private void dey(int address) {
         y = (y - 1) & 0xff;
-        setZ(y == 0);
-        setN((y & 0x80) != 0);
+        setZN(y);
     }
 
     private void eor(int address) {
         a ^= read(address);
-        setZ(a == 0);
-        setN((a & 0x80) != 0);
+        setZN(a);
     }
 
     private void inc(int address) {
         int f = read(address);
         int t = (f + 1) & 0xff;
-        setZ(t == 0);
-        setN((t & 0x80) != 0);
+        setZN(t);
         write(address, t);
     }
 
     private void inx(int address) {
         x = (x + 1) & 0xff;
-        setZ(x == 0);
-        setN((x & 0x80) != 0);
+        setZN(x);
     }
 
     private void iny(int address) {
         y = (y + 1) & 0xff;
-        setZ(y == 0);
-        setN((y & 0x80) != 0);
+        setZN(y);
     }
 
     private void jmp(int address) {
@@ -616,38 +586,32 @@ public final class Cpu {
     private void jsr(int address) {
         pc--;
 
-        write(0x0100 + sp, (pc & 0xFF00) >>> 8);
-        sp--;
-        write(0x0100 + sp, (pc & 0x00FF));
-        sp--;
+        push((pc & 0xFF00) >>> 8);
+        push(pc & 0x00FF);
 
         pc = address;
     }
 
     private void lda(int address) {
         a = read(address);
-        setZ(a == 0);
-        setN((a & 0x80) != 0);
+        setZN(a);
     }
 
     private void ldx(int address) {
         x = read(address);
-        setZ(x == 0);
-        setN((x & 0x80) != 0);
+        setZN(x);
     }
 
     private void ldy(int address) {
         y = read(address);
-        setZ(y == 0);
-        setN((y & 0x80) != 0);
+        setZN(y);
     }
 
     private void lsr(int address) {
         int f = read(address);
         setC((f & 0x01) != 0);
         int t = f >>> 1;
-        setZ(t == 0);
-        setN((t & 0x80) != 0);
+        setZN(t);
         write(address, t);
     }
 
@@ -656,30 +620,24 @@ public final class Cpu {
 
     private void ora(int address) {
         a |= read(address);
-        setZ(a == 0);
-        setN((a & 0x80) != 0);
+        setZN(a);
     }
 
     private void pha(int address) {
-        write(0x0100 + sp, a);
-        sp--;
+        push(a);
     }
 
     private void php(int address) {
-        write(0x0100 + sp, status);
-        sp--;
+        push(status);
     }
 
     private void pla(int address) {
-        sp++;
-        a = read(0x0100 + sp);
-        setZ(a == 0);
-        setN((a & 0x80) != 0);
+        a = pop();
+        setZN(a);
     }
 
     private void plp(int address) {
-        sp++;
-        status = read(0x0100 + sp);
+        status = pop();
         setU(true);
     }
 
@@ -687,8 +645,7 @@ public final class Cpu {
         int f = read(address);
         int t = (f << 1) | (getC() ? 0x01 : 0x00);
         setC((f & 0x80) != 0);
-        setZ(t == 0);
-        setN((t & 0x80) != 0);
+        setZN(t);
         write(address, t & 0xff);
     }
 
@@ -696,27 +653,21 @@ public final class Cpu {
         int f = read(address);
         int t = (f >>> 1) | (getC() ? 0x80 : 0x00);
         setC((f & 0x01) != 0);
-        setZ(t == 0);
-        setN((t & 0x80) != 0);
+        setZN(t);
         write(address, t);
     }
 
     private void rti(int address) {
-        sp++;
-        status = read(0x0100 + sp);
+        status = pop();
         setU(true); // TODO: check this
-        sp++;
-        int lo = read(0x0100 + sp);
-        sp++;
-        int hi = read(0x0100 + sp);
+        int lo = pop();
+        int hi = pop();
         pc = (hi << 8) | lo;
     }
 
     private void rts(int address) {
-        sp++;
-        int lo = read(0x0100 + sp);
-        sp++;
-        int hi = read(0x0100 + sp);
+        int lo = pop();
+        int hi = pop();
         pc = (hi << 8) | lo;
         pc++;
     }
@@ -724,12 +675,11 @@ public final class Cpu {
     private void sbc(int address) {
         int v1 = a;
         int v2 = read(address) ^ 0xff;
-        int result = v1 + v2 + (getC() ? 1 : 0);
-        a = result & 0xff;
-        setC(result > 0xff);
-        setZ(a == 0);
-        setV(((v1 ^ result) & (v2 ^ result) & 0x80) != 0);
-        setN((a & 0x80) != 0);
+        int t = v1 + v2 + (getC() ? 1 : 0);
+        a = t & 0xff;
+        setC(t > 0xff);
+        setV(((v1 ^ t) & (v2 ^ t) & 0x80) != 0);
+        setZN(a);
     }
 
     private void sec(int address) {
@@ -758,26 +708,22 @@ public final class Cpu {
 
     private void tax(int address) {
         x = a;
-        setZ(x == 0);
-        setN((x & 0x80) != 0);
+        setZN(x);
     }
 
     private void tay(int address) {
         y = a;
-        setZ(y == 0);
-        setN((y & 0x80) != 0);
+        setZN(y);
     }
 
     private void tsx(int address) {
         x = sp;
-        setZ(x == 0);
-        setN((x & 0x80) != 0);
+        setZN(x);
     }
 
     private void txa(int address) {
         a = x;
-        setZ(a == 0);
-        setN((a & 0x80) != 0);
+        setZN(a);
     }
 
     private void txs(int address) {
@@ -786,12 +732,28 @@ public final class Cpu {
 
     private void tya(int address) {
         a = y;
-        setZ(a == 0);
-        setN((a & 0x80) != 0);
+        setZN(a);
     }
 
-    private void xxx() {
-        throw new IllegalArgumentException("Invalid opcode: " + (pc & 0xffff));
+    private void setZN(int value) {
+        setZ(value == 0);
+        setN((value & 0x80) != 0);
+    }
+
+    private void branch(boolean condition, int address) {
+        if (condition) {
+            pc = address;
+        }
+    }
+
+    private void push(int value) {
+        write(0x0100 + sp, value);
+        sp = (sp - 1) & 0xff;
+    }
+
+    private int pop() {
+        sp = (sp + 1) & 0xff;
+        return read(0x0100 + sp);
     }
 
     // endregion
@@ -824,6 +786,10 @@ public final class Cpu {
         int hi = read(pc);
         incPC();
         return hi << 8 | lo;
+    }
+
+    private void incPC() {
+        pc = (pc + 1) & 0xFFFF;
     }
 
 }
