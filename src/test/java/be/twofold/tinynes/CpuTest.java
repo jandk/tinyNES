@@ -17,27 +17,35 @@ class CpuTest {
         Bus bus = new Bus(cartridge);
         Cpu cpu = new Cpu(bus);
         cpu.setPc(0xC000);
+        cpu.setStatus(0x24);
 
         List<State> states = readResults();
         for (int i = 0; i < states.size(); i++) {
             State state = states.get(i);
-            assertState(cpu, state, i + 1);
+            assertState(cpu, state, i);
             cpu.step();
         }
     }
 
     private void assertState(Cpu cpu, State state, int i) {
-        assertThat(cpu.getA())
-            .withFailMessage(() -> "Line " + i + " -- Expected A to be " + state.a + " but was " + cpu.getA())
-            .isEqualTo(state.a());
-        assertThat(cpu.getX()).isEqualTo(state.x());
-        assertThat(cpu.getY()).isEqualTo(state.y());
-        assertThat(cpu.getSp()).isEqualTo(state.sp());
-        assertThat(cpu.getPc()).isEqualTo(state.pc());
-        int status = cpu.getStatus() & 0xef; // Ignore bit 5
-        assertThat(status)
-            .withFailMessage(() -> "Line " + i + " -- Expected flags " + dumpFlags(state.status()) + " but was " + dumpFlags(status) + " at " + Integer.toHexString(state.pc()))
-            .isEqualTo(state.status());
+        assertValue(cpu.getA(), state.a(), i, "A");
+        assertValue(cpu.getX(), state.x(), i, "X");
+        assertValue(cpu.getY(), state.y(), i, "Y");
+        assertValue(cpu.getSp(), state.sp(), i, "SP");
+        assertValue(cpu.getPc(), state.pc(), i, "PC");
+
+        int actual = cpu.getStatus() & 0xdf; // Ignore bit 5
+        int expected = state.status() & 0xdf; // Ignore bit 5
+        assertThat(actual)
+            .withFailMessage(() -> "Line " + i + " -- Expected flags " + dumpFlags(expected) + " but was " + dumpFlags(actual) + " at " + Integer.toHexString(state.pc()))
+            .isEqualTo(expected);
+    }
+
+    private void assertValue(int actual, int expected, int i, String name) {
+        assertThat(actual)
+            .withFailMessage(() -> "Line %d -- Expected %s to be %s but was %s"
+                .formatted(i, name, Integer.toHexString(expected), Integer.toHexString(actual)))
+            .isEqualTo(expected);
     }
 
     private static String dumpFlags(int flags) {

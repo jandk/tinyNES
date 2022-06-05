@@ -190,7 +190,7 @@ public final class Cpu {
         y = 0;
         sp = 0xFD;
         pc = (hi << 8) | lo;
-        status = 0x34;
+        status = 0x16;
     }
 
     // region Decoder
@@ -350,6 +350,68 @@ public final class Cpu {
             case 0xFD -> sbc(abx());
             case 0xFE -> inc(abx());
 
+            // Illegal Opcodes
+            case 0x03 -> slo(izx());
+            case 0x04 -> nop(zp0());
+            case 0x07 -> slo(zp0());
+            case 0x0C -> nop(abs());
+            case 0x0F -> slo(abs());
+            case 0x13 -> slo(izy());
+            case 0x14, 0x34, 0x54, 0x74, 0xD4, 0xF4 -> nop(zpx());
+            case 0x17 -> slo(zpx());
+            case 0x1A, 0x3A, 0x5A, 0x7A, 0xDA, 0xFA -> nop(imp());
+            case 0x1B -> slo(aby());
+            case 0x1C, 0x3C, 0x5C, 0x7C, 0xDC, 0xFC -> nop(abx());
+            case 0x1F -> slo(abx());
+            case 0x23 -> rla(izx());
+            case 0x27 -> rla(zp0());
+            case 0x2F -> rla(abs());
+            case 0x33 -> rla(izy());
+            case 0x37 -> rla(zpx());
+            case 0x3B -> rla(aby());
+            case 0x3F -> rla(abx());
+            case 0x43 -> sre(izx());
+            case 0x44, 0x64 -> nop(zp0());
+            case 0x47 -> sre(zp0());
+            case 0x4F -> sre(abs());
+            case 0x53 -> sre(izy());
+            case 0x57 -> sre(zpx());
+            case 0x5B -> sre(aby());
+            case 0x5F -> sre(abx());
+            case 0x63 -> rra(izx());
+            case 0x67 -> rra(zp0());
+            case 0x6F -> rra(abs());
+            case 0x73 -> rra(izy());
+            case 0x77 -> rra(zpx());
+            case 0x7B -> rra(aby());
+            case 0x7F -> rra(abx());
+            case 0x80, 0x82, 0x89 -> nop(imm());
+            case 0x83 -> sax(izx());
+            case 0x87 -> sax(zp0());
+            case 0x8F -> sax(abs());
+            case 0x97 -> sax(zpy());
+            case 0xA3 -> lax(izx());
+            case 0xA7 -> lax(zp0());
+            case 0xAF -> lax(abs());
+            case 0xB3 -> lax(izy());
+            case 0xB7 -> lax(zpy());
+            case 0xBF -> lax(aby());
+            case 0xC3 -> dcp(izx());
+            case 0xC7 -> dcp(zp0());
+            case 0xCF -> dcp(abs());
+            case 0xD3 -> dcp(izy());
+            case 0xD7 -> dcp(zpx());
+            case 0xDB -> dcp(aby());
+            case 0xDF -> dcp(abx());
+            case 0xE3 -> isc(izx());
+            case 0xE7 -> isc(zp0());
+            case 0xEB -> sbc(imm());
+            case 0xEF -> isc(abs());
+            case 0xF3 -> isc(izy());
+            case 0xF7 -> isc(zpx());
+            case 0xFB -> isc(aby());
+            case 0xFF -> isc(abx());
+
             default ->
                 throw new IllegalArgumentException(String.format("Invalid opcode 0x%02X at 0x%04X", opcode, pc - 1));
         }
@@ -380,7 +442,7 @@ public final class Cpu {
     }
 
     private int rel() {
-        int rel = nextByte();
+        int rel = (byte) nextByte();
         return pc + rel;
     }
 
@@ -628,7 +690,7 @@ public final class Cpu {
     }
 
     private void php(int address) {
-        push(status);
+        push(status | 0x30);
     }
 
     private void pla(int address) {
@@ -638,6 +700,7 @@ public final class Cpu {
 
     private void plp(int address) {
         status = pop();
+        setB(false);
         setU(true);
     }
 
@@ -658,8 +721,7 @@ public final class Cpu {
     }
 
     private void rti(int address) {
-        status = pop();
-        setU(true); // TODO: check this
+        status = pop() & 0xcf;
         int lo = pop();
         int hi = pop();
         pc = (hi << 8) | lo;
@@ -733,6 +795,47 @@ public final class Cpu {
     private void tya(int address) {
         a = y;
         setZN(a);
+    }
+
+    // Unofficial
+
+    private void dcp(int address) {
+        dec(address);
+        cmp(address);
+    }
+
+    private void isc(int address) {
+        inc(address);
+        sbc(address);
+    }
+
+    private void lax(int address) {
+        a = x = read(address);
+        setZN(a);
+    }
+
+    private void rla(int address) {
+        rol(address);
+        and(address);
+    }
+
+    private void rra(int address) {
+        ror(address);
+        adc(address);
+    }
+
+    private void sax(int address) {
+        write(address, a & x);
+    }
+
+    private void sre(int address) {
+        lsr(address);
+        eor(address);
+    }
+
+    private void slo(int address) {
+        asl(address);
+        ora(address);
     }
 
     private void setZN(int value) {
