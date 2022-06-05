@@ -22,7 +22,7 @@ public final class Bus {
         if (address >= 0x4020 && address <= 0xFFFF) {
             return cartridge.cpuRead(address);
         }
-        throw new IllegalArgumentException("Invalid address: " + address);
+        throw new IllegalArgumentException("Invalid address: 0x" + Integer.toHexString(address));
     }
 
     public void write(int address, byte value) {
@@ -40,7 +40,7 @@ public final class Bus {
             cartridge.cpuWrite(address, value);
             return;
         }
-        throw new IllegalArgumentException("Invalid address: " + address);
+        throw new IllegalArgumentException("Invalid address: 0x" + Integer.toHexString(address));
     }
 
 }

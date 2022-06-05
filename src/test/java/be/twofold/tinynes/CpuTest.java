@@ -16,34 +16,40 @@ class CpuTest {
         Cartridge cartridge = new Cartridge(rom);
         Bus bus = new Bus(cartridge);
         Cpu cpu = new Cpu(bus);
-        cpu.setSp(0xC000);
+        cpu.setPc(0xC000);
 
-        List<Result> results = readResults();
-        for (Result result : results) {
+        List<State> states = readResults();
+        for (int i = 0; i < states.size(); i++) {
+            State state = states.get(i);
+            assertState(cpu, state, i + 1);
             cpu.step();
-            assertResult(cpu, result);
         }
     }
 
-    private void assertResult(Cpu cpu, Result result) {
-        assertThat(cpu.getA()).isEqualTo(result.a());
-        assertThat(cpu.getX()).isEqualTo(result.x());
-        assertThat(cpu.getY()).isEqualTo(result.y());
-        assertThat(cpu.getSp()).isEqualTo(result.sp());
-        assertThat(cpu.getPc()).isEqualTo(result.pc());
-        assertThat(cpu.getStatus()).isEqualTo(result.status());
+    private void assertState(Cpu cpu, State state, int i) {
+        assertThat(cpu.getA())
+            .withFailMessage(() -> "Line " + i + " -- Expected A to be " + state.a + " but was " + cpu.getA())
+            .isEqualTo(state.a());
+        assertThat(cpu.getX()).isEqualTo(state.x());
+        assertThat(cpu.getY()).isEqualTo(state.y());
+        assertThat(cpu.getSp()).isEqualTo(state.sp());
+        assertThat(cpu.getPc()).isEqualTo(state.pc());
+        int status = cpu.getStatus() & 0xef; // Ignore bit 5
+        assertThat(status)
+            .withFailMessage(() -> "Line " + i + " -- Expected flags " + dumpFlags(state.status()) + " but was " + dumpFlags(status) + " at " + Integer.toHexString(state.pc()))
+            .isEqualTo(state.status());
     }
 
-    private static String dumpFlags(Cpu cpu) {
-        return "Flags: " +
-            (cpu.getC() ? 'C' : '-') +
-            (cpu.getZ() ? 'Z' : '-') +
-            (cpu.getI() ? 'I' : '-') +
-            (cpu.getD() ? 'D' : '-') +
-            (cpu.getB() ? 'B' : '-') +
-            (cpu.getU() ? 'U' : '-') +
-            (cpu.getV() ? 'V' : '-') +
-            (cpu.getN() ? 'N' : '-');
+    private static String dumpFlags(int flags) {
+        return "" +
+            ((flags & 0x80) != 0 ? 'N' : '-') +
+            ((flags & 0x40) != 0 ? 'V' : '-') +
+            ((flags & 0x20) != 0 ? 'U' : '-') +
+            ((flags & 0x10) != 0 ? 'B' : '-') +
+            ((flags & 0x08) != 0 ? 'D' : '-') +
+            ((flags & 0x04) != 0 ? 'I' : '-') +
+            ((flags & 0x02) != 0 ? 'Z' : '-') +
+            ((flags & 0x01) != 0 ? 'C' : '-');
     }
 
     private static Rom readRom() {
@@ -54,7 +60,7 @@ class CpuTest {
         }
     }
 
-    private static List<Result> readResults() {
+    private static List<State> readResults() {
         try (InputStream in = Main.class.getResourceAsStream("/nestest.log");
              BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))
         ) {
@@ -64,19 +70,19 @@ class CpuTest {
         }
     }
 
-    private static List<Result> readResults(BufferedReader reader) throws IOException {
-        List<Result> results = new ArrayList<>();
+    private static List<State> readResults(BufferedReader reader) throws IOException {
+        List<State> states = new ArrayList<>();
         while (true) {
             String line = reader.readLine();
             if (line == null) {
                 break;
             }
-            results.add(Result.parse(line));
+            states.add(State.parse(line));
         }
-        return results;
+        return states;
     }
 
-    private record Result(
+    private record State(
         int a,
         int x,
         int y,
@@ -84,14 +90,14 @@ class CpuTest {
         int pc,
         int status
     ) {
-        public static Result parse(String line) {
+        public static State parse(String line) {
             int a = Integer.parseInt(line.substring(50, 52), 16);
             int x = Integer.parseInt(line.substring(55, 57), 16);
             int y = Integer.parseInt(line.substring(60, 62), 16);
             int sp = Integer.parseInt(line.substring(71, 73), 16);
             int pc = Integer.parseInt(line.substring(0, 4), 16);
             int status = Integer.parseInt(line.substring(65, 67), 16);
-            return new Result(a, x, y, sp, pc, status);
+            return new State(a, x, y, sp, pc, status);
         }
     }
 

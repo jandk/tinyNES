@@ -25,6 +25,7 @@ public final class Cpu {
     }
 
     public void setA(int a) {
+        assert 0x00 <= a && a <= 0xFF;
         this.a = a;
     }
 
@@ -33,6 +34,7 @@ public final class Cpu {
     }
 
     public void setX(int x) {
+        assert 0x00 <= a && a <= 0xFF;
         this.x = x;
     }
 
@@ -41,6 +43,7 @@ public final class Cpu {
     }
 
     public void setY(int y) {
+        assert 0x00 <= a && a <= 0xFF;
         this.y = y;
     }
 
@@ -49,6 +52,7 @@ public final class Cpu {
     }
 
     public void setSp(int sp) {
+        assert 0x00 <= a && a <= 0xFF;
         this.sp = sp;
     }
 
@@ -57,6 +61,7 @@ public final class Cpu {
     }
 
     public void setPc(int pc) {
+        assert 0x0000 <= a && a <= 0xFFFF;
         this.pc = pc;
     }
 
@@ -65,6 +70,7 @@ public final class Cpu {
     }
 
     public void setStatus(int status) {
+        assert 0x00 <= a && a <= 0xFF;
         this.status = status;
     }
 
@@ -171,7 +177,8 @@ public final class Cpu {
     // endregion
 
     public void step() {
-        execute(nextByte());
+        int opcode = nextByte();
+        execute(opcode);
     }
 
     public void reset() {
@@ -354,7 +361,7 @@ public final class Cpu {
     // region Addressing Modes
 
     private int imp() {
-        return 0;
+        return -1;
     }
 
     private int imm() {
@@ -431,228 +438,356 @@ public final class Cpu {
 
     // region Opcodes
 
-    private void adc(int cycle) {
+    private void adc(int address) {
+        int v1 = a;
+        int v2 = read(address);
+        int result = v1 + v2 + (getC() ? 1 : 0);
+        a = result & 0xff;
+        setC(result > 0xff);
+        setZ(a == 0);
+        setV(((v1 ^ result) & (v2 ^ result) & 0x80) != 0);
+        setN((a & 0x80) != 0);
+    }
+
+    private void and(int address) {
+        a &= read(address);
+        setZ(a == 0);
+        setN((a & 0x80) != 0);
+    }
+
+    private void asl(int address) {
+        int f = read(address);
+        setC((f & 0x80) != 0);
+        int t = (f << 1) & 0xff;
+        setZ(t == 0);
+        setN((t & 0x80) != 0);
+        write(address, t);
+    }
+
+    private void bcc(int address) {
+        if (!getC()) {
+            pc = address;
+        }
+    }
+
+    private void bcs(int address) {
+        if (getC()) {
+            pc = address;
+        }
+    }
+
+    private void beq(int address) {
+        if (getZ()) {
+            pc = address;
+        }
+    }
+
+    private void bit(int address) {
+        int temp = read(address);
+        setZ((a & temp) == 0);
+        setN((temp & 0x80) != 0);
+        setV((temp & 0x40) != 0);
+    }
+
+    private void bmi(int address) {
+        if (getN()) {
+            pc = address;
+        }
+    }
+
+    private void bne(int address) {
+        if (!getZ()) {
+            pc = address;
+        }
+    }
+
+    private void bpl(int address) {
+        if (!getN()) {
+            pc = address;
+        }
+    }
+
+    private void brk(int address) {
         throw new UnsupportedOperationException();
     }
 
-    private void and(int cycle) {
-        throw new UnsupportedOperationException();
+    private void bvc(int address) {
+        if (!getV()) {
+            pc = address;
+        }
     }
 
-    private void asl(int cycle) {
-        throw new UnsupportedOperationException();
+    private void bvs(int address) {
+        if (getV()) {
+            pc = address;
+        }
     }
 
-    private void bcc(int cycle) {
-        throw new UnsupportedOperationException();
+    private void clc(int address) {
+        setC(false);
     }
 
-    private void bcs(int cycle) {
-        throw new UnsupportedOperationException();
+    private void cld(int address) {
+        setD(false);
     }
 
-    private void beq(int cycle) {
-        throw new UnsupportedOperationException();
+    private void cli(int address) {
+        setI(false);
     }
 
-    private void bit(int cycle) {
-        throw new UnsupportedOperationException();
+    private void clv(int address) {
+        setV(false);
     }
 
-    private void bmi(int cycle) {
-        throw new UnsupportedOperationException();
+    private void cmp(int address) {
+        int f = read(address);
+        int t = a - f;
+        setC(a >= f);
+        setZ(t == 0);
+        setN((t & 0x80) != 0);
     }
 
-    private void bne(int cycle) {
-        throw new UnsupportedOperationException();
+    private void cpx(int address) {
+        int f = read(address);
+        int t = x - f;
+        setC(x >= f);
+        setZ(t == 0);
+        setN((t & 0x80) != 0);
     }
 
-    private void bpl(int cycle) {
-        throw new UnsupportedOperationException();
+    private void cpy(int address) {
+        int f = read(address);
+        int t = y - f;
+        setC(y >= f);
+        setZ(t == 0);
+        setN((t & 0x80) != 0);
     }
 
-    private void brk(int cycle) {
-        throw new UnsupportedOperationException();
+    private void dec(int address) {
+        int f = read(address);
+        int t = (f - 1) & 0xff;
+        setZ(t == 0);
+        setN((t & 0x80) != 0);
+        write(address, t);
     }
 
-    private void bvc(int cycle) {
-        throw new UnsupportedOperationException();
+    private void dex(int address) {
+        x = (x - 1) & 0xff;
+        setZ(x == 0);
+        setN((x & 0x80) != 0);
     }
 
-    private void bvs(int cycle) {
-        throw new UnsupportedOperationException();
+    private void dey(int address) {
+        y = (y - 1) & 0xff;
+        setZ(y == 0);
+        setN((y & 0x80) != 0);
     }
 
-    private void clc(int cycle) {
-        throw new UnsupportedOperationException();
+    private void eor(int address) {
+        a ^= read(address);
+        setZ(a == 0);
+        setN((a & 0x80) != 0);
     }
 
-    private void cld(int cycle) {
-        throw new UnsupportedOperationException();
+    private void inc(int address) {
+        int f = read(address);
+        int t = (f + 1) & 0xff;
+        setZ(t == 0);
+        setN((t & 0x80) != 0);
+        write(address, t);
     }
 
-    private void cli(int cycle) {
-        throw new UnsupportedOperationException();
+    private void inx(int address) {
+        x = (x + 1) & 0xff;
+        setZ(x == 0);
+        setN((x & 0x80) != 0);
     }
 
-    private void clv(int cycle) {
-        throw new UnsupportedOperationException();
+    private void iny(int address) {
+        y = (y + 1) & 0xff;
+        setZ(y == 0);
+        setN((y & 0x80) != 0);
     }
 
-    private void cmp(int cycle) {
-        throw new UnsupportedOperationException();
+    private void jmp(int address) {
+        pc = address;
     }
 
-    private void cpx(int cycle) {
-        throw new UnsupportedOperationException();
+    private void jsr(int address) {
+        pc--;
+
+        write(0x0100 + sp, (pc & 0xFF00) >>> 8);
+        sp--;
+        write(0x0100 + sp, (pc & 0x00FF));
+        sp--;
+
+        pc = address;
     }
 
-    private void cpy(int cycle) {
-        throw new UnsupportedOperationException();
+    private void lda(int address) {
+        a = read(address);
+        setZ(a == 0);
+        setN((a & 0x80) != 0);
     }
 
-    private void dec(int cycle) {
-        throw new UnsupportedOperationException();
+    private void ldx(int address) {
+        x = read(address);
+        setZ(x == 0);
+        setN((x & 0x80) != 0);
     }
 
-    private void dex(int cycle) {
-        throw new UnsupportedOperationException();
+    private void ldy(int address) {
+        y = read(address);
+        setZ(y == 0);
+        setN((y & 0x80) != 0);
     }
 
-    private void dey(int cycle) {
-        throw new UnsupportedOperationException();
+    private void lsr(int address) {
+        int f = read(address);
+        setC((f & 0x01) != 0);
+        int t = f >>> 1;
+        setZ(t == 0);
+        setN((t & 0x80) != 0);
+        write(address, t);
     }
 
-    private void eor(int cycle) {
-        throw new UnsupportedOperationException();
+    private void nop(int address) {
     }
 
-    private void inc(int cycle) {
-        throw new UnsupportedOperationException();
+    private void ora(int address) {
+        a |= read(address);
+        setZ(a == 0);
+        setN((a & 0x80) != 0);
     }
 
-    private void inx(int cycle) {
-        throw new UnsupportedOperationException();
+    private void pha(int address) {
+        write(0x0100 + sp, a);
+        sp--;
     }
 
-    private void iny(int cycle) {
-        throw new UnsupportedOperationException();
+    private void php(int address) {
+        write(0x0100 + sp, status);
+        sp--;
     }
 
-    private void jmp(int cycle) {
-        throw new UnsupportedOperationException();
+    private void pla(int address) {
+        sp++;
+        a = read(0x0100 + sp);
+        setZ(a == 0);
+        setN((a & 0x80) != 0);
     }
 
-    private void jsr(int cycle) {
-        throw new UnsupportedOperationException();
+    private void plp(int address) {
+        sp++;
+        status = read(0x0100 + sp);
+        setU(true);
     }
 
-    private void lda(int cycle) {
-        throw new UnsupportedOperationException();
+    private void rol(int address) {
+        int f = read(address);
+        int t = (f << 1) | (getC() ? 0x01 : 0x00);
+        setC((f & 0x80) != 0);
+        setZ(t == 0);
+        setN((t & 0x80) != 0);
+        write(address, t & 0xff);
     }
 
-    private void ldx(int cycle) {
-        throw new UnsupportedOperationException();
+    private void ror(int address) {
+        int f = read(address);
+        int t = (f >>> 1) | (getC() ? 0x80 : 0x00);
+        setC((f & 0x01) != 0);
+        setZ(t == 0);
+        setN((t & 0x80) != 0);
+        write(address, t);
     }
 
-    private void ldy(int cycle) {
-        throw new UnsupportedOperationException();
+    private void rti(int address) {
+        sp++;
+        status = read(0x0100 + sp);
+        setU(true); // TODO: check this
+        sp++;
+        int lo = read(0x0100 + sp);
+        sp++;
+        int hi = read(0x0100 + sp);
+        pc = (hi << 8) | lo;
     }
 
-    private void lsr(int cycle) {
-        throw new UnsupportedOperationException();
+    private void rts(int address) {
+        sp++;
+        int lo = read(0x0100 + sp);
+        sp++;
+        int hi = read(0x0100 + sp);
+        pc = (hi << 8) | lo;
+        pc++;
     }
 
-    private void nop(int cycle) {
-        throw new UnsupportedOperationException();
+    private void sbc(int address) {
+        int v1 = a;
+        int v2 = read(address) ^ 0xff;
+        int result = v1 + v2 + (getC() ? 1 : 0);
+        a = result & 0xff;
+        setC(result > 0xff);
+        setZ(a == 0);
+        setV(((v1 ^ result) & (v2 ^ result) & 0x80) != 0);
+        setN((a & 0x80) != 0);
     }
 
-    private void ora(int cycle) {
-        throw new UnsupportedOperationException();
+    private void sec(int address) {
+        setC(true);
     }
 
-    private void pha(int cycle) {
-        throw new UnsupportedOperationException();
+    private void sed(int address) {
+        setD(true);
     }
 
-    private void php(int cycle) {
-        throw new UnsupportedOperationException();
+    private void sei(int address) {
+        setI(true);
     }
 
-    private void pla(int cycle) {
-        throw new UnsupportedOperationException();
+    private void sta(int address) {
+        write(address, a);
     }
 
-    private void plp(int cycle) {
-        throw new UnsupportedOperationException();
+    private void stx(int address) {
+        write(address, x);
     }
 
-    private void rol(int cycle) {
-        throw new UnsupportedOperationException();
+    private void sty(int address) {
+        write(address, y);
     }
 
-    private void ror(int cycle) {
-        throw new UnsupportedOperationException();
+    private void tax(int address) {
+        x = a;
+        setZ(x == 0);
+        setN((x & 0x80) != 0);
     }
 
-    private void rti(int cycle) {
-        throw new UnsupportedOperationException();
+    private void tay(int address) {
+        y = a;
+        setZ(y == 0);
+        setN((y & 0x80) != 0);
     }
 
-    private void rts(int cycle) {
-        throw new UnsupportedOperationException();
+    private void tsx(int address) {
+        x = sp;
+        setZ(x == 0);
+        setN((x & 0x80) != 0);
     }
 
-    private void sbc(int cycle) {
-        throw new UnsupportedOperationException();
+    private void txa(int address) {
+        a = x;
+        setZ(a == 0);
+        setN((a & 0x80) != 0);
     }
 
-    private void sec(int cycle) {
-        throw new UnsupportedOperationException();
+    private void txs(int address) {
+        sp = x;
     }
 
-    private void sed(int cycle) {
-        throw new UnsupportedOperationException();
-    }
-
-    private void sei(int cycle) {
-        throw new UnsupportedOperationException();
-    }
-
-    private void sta(int cycle) {
-        throw new UnsupportedOperationException();
-    }
-
-    private void stx(int cycle) {
-        throw new UnsupportedOperationException();
-    }
-
-    private void sty(int cycle) {
-        throw new UnsupportedOperationException();
-    }
-
-    private void tax(int cycle) {
-        throw new UnsupportedOperationException();
-    }
-
-    private void tay(int cycle) {
-        throw new UnsupportedOperationException();
-    }
-
-    private void tsx(int cycle) {
-        throw new UnsupportedOperationException();
-    }
-
-    private void txa(int cycle) {
-        throw new UnsupportedOperationException();
-    }
-
-    private void txs(int cycle) {
-        throw new UnsupportedOperationException();
-    }
-
-    private void tya(int cycle) {
-        throw new UnsupportedOperationException();
+    private void tya(int address) {
+        a = y;
+        setZ(a == 0);
+        setN((a & 0x80) != 0);
     }
 
     private void xxx() {
@@ -662,10 +797,18 @@ public final class Cpu {
     // endregion
 
     private int read(int address) {
-        return Byte.toUnsignedInt(bus.read(address));
+        if (address < 0) {
+            return a;
+        }
+        return Byte.toUnsignedInt(bus.read(address & 0xffff));
     }
 
     private void write(int address, int value) {
+        assert value >= 0 && value <= 0xff;
+        if (address < 0) {
+            a = value;
+            return;
+        }
         bus.write(address, (byte) value);
     }
 
