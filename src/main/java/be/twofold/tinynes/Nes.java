@@ -1,12 +1,40 @@
 package be.twofold.tinynes;
 
+import java.util.*;
+
 public final class Nes {
 
     private final Cartridge cartridge;
+    final Cpu cpu;
+    final Ppu ppu;
     private final byte[] ram = new byte[2 * 1024];
+    private int clockCounter = 0;
 
     public Nes(Cartridge cartridge) {
-        this.cartridge = cartridge;
+        this.cartridge = Objects.requireNonNull(cartridge);
+        this.cpu = new Cpu(this);
+        this.ppu = new Ppu(cartridge);
+    }
+
+    public void clock() {
+        ppu.clock();
+        if ((clockCounter % 3) == 0) {
+            cpu.clock();
+        }
+        if (ppu.nmi) {
+            ppu.nmi = false;
+            cpu.nmi();
+        }
+        clockCounter++;
+    }
+
+    public void step() {
+        for (int i = 0; i < 3; i++) {
+            clock();
+        }
+        while (cpu.cycles != 0) {
+            clock();
+        }
     }
 
     public byte read(int address) {
@@ -14,9 +42,15 @@ public final class Nes {
             return ram[address & 0x07FF];
         }
         if (address >= 0x2000 && address <= 0x3FFF) {
-            return 0;
+            // System.err.println("Read from PPU: " + Util.hex4(address));
+            return ppu.read(address);
         }
         if (address >= 0x4000 && address <= 0x401F) {
+            if (address <= 0x4013 || address == 0x4015 || address == 0x4017) {
+                // System.err.println("Read from APU: " + Util.hex4(address));
+                return 0;
+            }
+            System.err.println("Read from IO: " + Util.hex4(address));
             return 0;
         }
         if (address >= 0x4020 && address <= 0xFFFF) {
@@ -31,9 +65,15 @@ public final class Nes {
             return;
         }
         if (address >= 0x2000 && address <= 0x3FFF) {
+            ppu.write(address, value);
             return;
         }
         if (address >= 0x4000 && address <= 0x401F) {
+            if (address <= 0x4013 || address == 0x4015 || address == 0x4017) {
+                // System.err.println("Write to APU: " + Util.hex4(address) + " -- " + Util.hex2(value));
+                return;
+            }
+            System.err.println("Write to IO: " + Util.hex4(address) + " -- " + Util.hex2(value));
             return;
         }
         if (address >= 0x4020 && address <= 0xFFFF) {
@@ -42,5 +82,4 @@ public final class Nes {
         }
         throw new IllegalArgumentException("Invalid address: 0x" + Integer.toHexString(address));
     }
-
 }

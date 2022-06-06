@@ -31,7 +31,9 @@ public final class Cpu {
     private int sp;     // Stack pointer
     private int pc;     // Program counter
     private int status; // Status register
-    private int cycles; // Cycles since last instruction
+    int cycles; // Cycles since last instruction
+
+    private final Tracer tracer = new Tracer();
 
     int totalCycles;
 
@@ -65,14 +67,44 @@ public final class Cpu {
         x = 0;
         y = 0;
         sp = 0xFD;
-        pc = (hi << 8) | lo;
+        setPc((hi << 8) | lo);
         status = 0x16;
     }
 
     public void irq() {
+        if (getI()) {
+            return;
+        }
+
+        push(pc >> 8);
+        push(pc & 0xFF);
+
+        setB(false);
+        setU(true);
+        setI(true);
+        push(status);
+
+        int lo = read(0xFFFE);
+        int hi = read(0xFFFF);
+        setPc((hi << 8) | lo);
+
+        cycles = 7;
     }
 
     public void nmi() {
+        push((pc >> 8) & 0xFF);
+        push(pc & 0xFF);
+
+        setB(false);
+        setU(true);
+        setI(true);
+        push(status);
+
+        int lo = read(0xFFFA);
+        int hi = read(0xFFFB);
+        setPc((hi << 8) | lo);
+
+        cycles = 8;
     }
 
     // region Getters and Setters
@@ -118,7 +150,7 @@ public final class Cpu {
     }
 
     public void setPc(int pc) {
-        assert 0x0000 <= a && a <= 0xFFFF;
+        // assert 0x0000 <= a && a <= 0xFFFF;
         this.pc = pc;
     }
 
@@ -482,6 +514,9 @@ public final class Cpu {
     }
 
     private int rel() {
+        if (pc == 0xe9ef) {
+            System.out.println();
+        }
         int rel = (byte) nextByte();
         return pc + rel;
     }
@@ -594,7 +629,13 @@ public final class Cpu {
     }
 
     private void brk(int address) {
-        throw new UnsupportedOperationException();
+        incPC();
+        push(pc >> 8);
+        push(pc & 0xff);
+        setB(true);
+        push(status);
+        setB(false);
+        setPc(read(0xfffe) << 8 | read(0xffff));
     }
 
     private void bvc(int address) {
@@ -682,7 +723,7 @@ public final class Cpu {
     }
 
     private void jmp(int address) {
-        pc = address;
+        setPc(address);
     }
 
     private void jsr(int address) {
@@ -691,7 +732,8 @@ public final class Cpu {
         push((pc & 0xFF00) >>> 8);
         push(pc & 0x00FF);
 
-        pc = address;
+        setPc(address);
+        tracer.jsr(address);
     }
 
     private void lda(int address) {
@@ -764,14 +806,15 @@ public final class Cpu {
         status = pop() & 0xcf;
         int lo = pop();
         int hi = pop();
-        pc = (hi << 8) | lo;
+        setPc((hi << 8) | lo);
     }
 
     private void rts(int address) {
         int lo = pop();
         int hi = pop();
-        pc = (hi << 8) | lo;
-        pc++;
+        setPc((hi << 8) | lo);
+        incPC();
+        tracer.rts(pc);
     }
 
     private void sbc(int address) {
@@ -887,7 +930,7 @@ public final class Cpu {
 
     private void branch(boolean condition, int address) {
         if (condition) {
-            pc = address;
+            setPc(address);
             cycles++;
         }
     }
@@ -938,4 +981,14 @@ public final class Cpu {
         pc = (pc + 1) & 0xFFFF;
     }
 
+    @Override
+    public String toString() {
+        return "Cpu(" +
+            "a=" + Util.hex2(a) + ", " +
+            "x=" + Util.hex2(x) + ", " +
+            "y=" + Util.hex2(y) + ", " +
+            "sp=" + Util.hex4(sp) + ", " +
+            "pc=" + Util.hex4(pc) +
+            ")";
+    }
 }

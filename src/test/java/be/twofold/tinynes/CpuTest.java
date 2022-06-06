@@ -2,9 +2,11 @@ package be.twofold.tinynes;
 
 import org.junit.jupiter.api.*;
 
+import javax.imageio.*;
 import java.io.*;
 import java.nio.charset.*;
 import java.util.*;
+import java.util.stream.*;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -12,33 +14,33 @@ class CpuTest {
 
     @Test
     void testWithNesTest() {
-        Cpu cpu = load("/nestest.nes");
-        cpu.setPc(0xC000);
-        cpu.setStatus(0x24);
-        cpu.totalCycles = 7;
+        Nes nes = load("/nestest.nes");
+        nes.cpu.setPc(0xC000);
+        nes.cpu.setStatus(0x24);
+        nes.cpu.totalCycles = 7;
 
         List<State> states = readResults();
         for (int i = 0; i < states.size(); i++) {
             State state = states.get(i);
-            assertState(cpu, state, i);
-            cpu.step();
+            assertState(nes.cpu, state, i);
+            nes.step();
         }
     }
 
     @Test
     void testWithBlarggInstructionTiming() {
-        Cpu cpu = load("/instr_timing.nes");
+        Nes nes = load("/instr_timing.nes");
 
         while (true) {
-            cpu.step();
-            if (cpu.read(0x6000) != 0x00 && cpu.read(0x6000) != 0x80) {
+            nes.step();
+            if (nes.read(0x6000) != 0x00 && nes.read(0x6000) != (byte) 0x80) {
                 break;
             }
         }
 
         StringBuilder sb = new StringBuilder();
         for (int offset = 0x6004; ; offset++) {
-            int value = cpu.read(offset);
+            int value = nes.read(offset);
             if (value == 0x00) {
                 break;
             }
@@ -46,19 +48,38 @@ class CpuTest {
         }
 
         System.out.println(sb);
-        System.out.println(cpu.totalCycles);
-    }
-
-    private Cpu load(String path) {
-        InputStream in = Main.class.getResourceAsStream(path);
-        Rom rom = Rom.load(in);
-        Cartridge cartridge = new Cartridge(rom);
-        Nes nes = new Nes(cartridge);
-        return new Cpu(nes);
+        System.out.println(nes.cpu.totalCycles);
     }
 
     @Test
-    void testWithKlaus() {
+    void testWithBlarggCpuTimingTest() throws IOException {
+        Nes nes = load("/cpu_timing_test.nes");
+
+        List<Integer> pcs = new ArrayList<>();
+        // for (int i = 0; i < 1000; i++) {
+        while (true) {
+            pcs.add(nes.cpu.getPc());
+            nes.step();
+            if (nes.cpu.getPc() == 0xEA5A) {
+                break;
+            }
+        }
+
+        ImageIO.write(nes.ppu.drawBackground(0, 0), "png", new File("C:\\Temp\\bg-0-0.png"));
+
+        String lastPCs = pcs.subList(pcs.size() - 10, pcs.size()).stream()
+            .map(Util::hex4)
+            .collect(Collectors.joining(", "));
+
+        System.out.println(lastPCs);
+        System.out.println(nes.cpu.totalCycles);
+    }
+
+    private Nes load(String path) {
+        InputStream in = Main.class.getResourceAsStream(path);
+        Rom rom = Rom.load(in);
+        Cartridge cartridge = new Cartridge(rom);
+        return new Nes(cartridge);
     }
 
     // region NesTest
