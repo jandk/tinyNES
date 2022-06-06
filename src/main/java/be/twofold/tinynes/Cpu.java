@@ -280,13 +280,13 @@ public final class Cpu {
             case 0x0D -> ora(abs());
             case 0x0E -> asl(abs());
             case 0x10 -> bpl(rel());
-            case 0x11 -> ora(izy());
+            case 0x11 -> ora(izy(opcode));
             case 0x15 -> ora(zpx());
             case 0x16 -> asl(zpx());
             case 0x18 -> clc(imp());
-            case 0x19 -> ora(aby());
-            case 0x1D -> ora(abx());
-            case 0x1E -> asl(abx());
+            case 0x19 -> ora(aby(opcode));
+            case 0x1D -> ora(abx(opcode));
+            case 0x1E -> asl(abx(opcode));
             case 0x20 -> jsr(abs());
             case 0x21 -> and(izx());
             case 0x24 -> bit(zp0());
@@ -299,13 +299,13 @@ public final class Cpu {
             case 0x2D -> and(abs());
             case 0x2E -> rol(abs());
             case 0x30 -> bmi(rel());
-            case 0x31 -> and(izy());
+            case 0x31 -> and(izy(opcode));
             case 0x35 -> and(zpx());
             case 0x36 -> rol(zpx());
             case 0x38 -> sec(imp());
-            case 0x39 -> and(aby());
-            case 0x3D -> and(abx());
-            case 0x3E -> rol(abx());
+            case 0x39 -> and(aby(opcode));
+            case 0x3D -> and(abx(opcode));
+            case 0x3E -> rol(abx(opcode));
             case 0x40 -> rti(imp());
             case 0x41 -> eor(izx());
             case 0x45 -> eor(zp0());
@@ -317,13 +317,13 @@ public final class Cpu {
             case 0x4D -> eor(abs());
             case 0x4E -> lsr(abs());
             case 0x50 -> bvc(rel());
-            case 0x51 -> eor(izy());
+            case 0x51 -> eor(izy(opcode));
             case 0x55 -> eor(zpx());
             case 0x56 -> lsr(zpx());
             case 0x58 -> cli(imp());
-            case 0x59 -> eor(aby());
-            case 0x5D -> eor(abx());
-            case 0x5E -> lsr(abx());
+            case 0x59 -> eor(aby(opcode));
+            case 0x5D -> eor(abx(opcode));
+            case 0x5E -> lsr(abx(opcode));
             case 0x60 -> rts(imp());
             case 0x61 -> adc(izx());
             case 0x65 -> adc(zp0());
@@ -335,13 +335,13 @@ public final class Cpu {
             case 0x6D -> adc(abs());
             case 0x6E -> ror(abs());
             case 0x70 -> bvs(rel());
-            case 0x71 -> adc(izy());
+            case 0x71 -> adc(izy(opcode));
             case 0x75 -> adc(zpx());
             case 0x76 -> ror(zpx());
             case 0x78 -> sei(imp());
-            case 0x79 -> adc(aby());
-            case 0x7D -> adc(abx());
-            case 0x7E -> ror(abx());
+            case 0x79 -> adc(aby(opcode));
+            case 0x7D -> adc(abx(opcode));
+            case 0x7E -> ror(abx(opcode));
             case 0x81 -> sta(izx());
             case 0x84 -> sty(zp0());
             case 0x85 -> sta(zp0());
@@ -352,14 +352,14 @@ public final class Cpu {
             case 0x8D -> sta(abs());
             case 0x8E -> stx(abs());
             case 0x90 -> bcc(rel());
-            case 0x91 -> sta(izy());
+            case 0x91 -> sta(izy(opcode));
             case 0x94 -> sty(zpx());
             case 0x95 -> sta(zpx());
             case 0x96 -> stx(zpy());
             case 0x98 -> tya(imp());
-            case 0x99 -> sta(aby());
+            case 0x99 -> sta(aby(opcode));
             case 0x9A -> txs(imp());
-            case 0x9D -> sta(abx());
+            case 0x9D -> sta(abx(opcode));
             case 0xA0 -> ldy(imm());
             case 0xA1 -> lda(izx());
             case 0xA2 -> ldx(imm());
@@ -373,16 +373,16 @@ public final class Cpu {
             case 0xAD -> lda(abs());
             case 0xAE -> ldx(abs());
             case 0xB0 -> bcs(rel());
-            case 0xB1 -> lda(izy());
+            case 0xB1 -> lda(izy(opcode));
             case 0xB4 -> ldy(zpx());
             case 0xB5 -> lda(zpx());
             case 0xB6 -> ldx(zpy());
             case 0xB8 -> clv(imp());
-            case 0xB9 -> lda(aby());
+            case 0xB9 -> lda(aby(opcode));
             case 0xBA -> tsx(imp());
-            case 0xBC -> ldy(abx());
-            case 0xBD -> lda(abx());
-            case 0xBE -> ldx(aby());
+            case 0xBC -> ldy(abx(opcode));
+            case 0xBD -> lda(abx(opcode));
+            case 0xBE -> ldx(aby(opcode));
             case 0xC0 -> cpy(imm());
             case 0xC1 -> cmp(izx());
             case 0xC4 -> cpy(zp0());
@@ -395,13 +395,13 @@ public final class Cpu {
             case 0xCD -> cmp(abs());
             case 0xCE -> dec(abs());
             case 0xD0 -> bne(rel());
-            case 0xD1 -> cmp(izy());
+            case 0xD1 -> cmp(izy(opcode));
             case 0xD5 -> cmp(zpx());
             case 0xD6 -> dec(zpx());
             case 0xD8 -> cld(imp());
-            case 0xD9 -> cmp(aby());
-            case 0xDD -> cmp(abx());
-            case 0xDE -> dec(abx());
+            case 0xD9 -> cmp(aby(opcode));
+            case 0xDD -> cmp(abx(opcode));
+            case 0xDE -> dec(abx(opcode));
             case 0xE0 -> cpx(imm());
             case 0xE1 -> sbc(izx());
             case 0xE4 -> cpx(zp0());
@@ -414,13 +414,13 @@ public final class Cpu {
             case 0xED -> sbc(abs());
             case 0xEE -> inc(abs());
             case 0xF0 -> beq(rel());
-            case 0xF1 -> sbc(izy());
+            case 0xF1 -> sbc(izy(opcode));
             case 0xF5 -> sbc(zpx());
             case 0xF6 -> inc(zpx());
             case 0xF8 -> sed(imp());
-            case 0xF9 -> sbc(aby());
-            case 0xFD -> sbc(abx());
-            case 0xFE -> inc(abx());
+            case 0xF9 -> sbc(aby(opcode));
+            case 0xFD -> sbc(abx(opcode));
+            case 0xFE -> inc(abx(opcode));
 
             // Illegal Opcodes
             case 0x03 -> slo(izx());
@@ -428,35 +428,35 @@ public final class Cpu {
             case 0x07 -> slo(zp0());
             case 0x0C -> nop(abs());
             case 0x0F -> slo(abs());
-            case 0x13 -> slo(izy());
+            case 0x13 -> slo(izy(opcode));
             case 0x14, 0x34, 0x54, 0x74, 0xD4, 0xF4 -> nop(zpx());
             case 0x17 -> slo(zpx());
             case 0x1A, 0x3A, 0x5A, 0x7A, 0xDA, 0xFA -> nop(imp());
-            case 0x1B -> slo(aby());
-            case 0x1C, 0x3C, 0x5C, 0x7C, 0xDC, 0xFC -> nop(abx());
-            case 0x1F -> slo(abx());
+            case 0x1B -> slo(aby(opcode));
+            case 0x1C, 0x3C, 0x5C, 0x7C, 0xDC, 0xFC -> nop(abx(opcode));
+            case 0x1F -> slo(abx(opcode));
             case 0x23 -> rla(izx());
             case 0x27 -> rla(zp0());
             case 0x2F -> rla(abs());
-            case 0x33 -> rla(izy());
+            case 0x33 -> rla(izy(opcode));
             case 0x37 -> rla(zpx());
-            case 0x3B -> rla(aby());
-            case 0x3F -> rla(abx());
+            case 0x3B -> rla(aby(opcode));
+            case 0x3F -> rla(abx(opcode));
             case 0x43 -> sre(izx());
             case 0x44, 0x64 -> nop(zp0());
             case 0x47 -> sre(zp0());
             case 0x4F -> sre(abs());
-            case 0x53 -> sre(izy());
+            case 0x53 -> sre(izy(opcode));
             case 0x57 -> sre(zpx());
-            case 0x5B -> sre(aby());
-            case 0x5F -> sre(abx());
+            case 0x5B -> sre(aby(opcode));
+            case 0x5F -> sre(abx(opcode));
             case 0x63 -> rra(izx());
             case 0x67 -> rra(zp0());
             case 0x6F -> rra(abs());
-            case 0x73 -> rra(izy());
+            case 0x73 -> rra(izy(opcode));
             case 0x77 -> rra(zpx());
-            case 0x7B -> rra(aby());
-            case 0x7F -> rra(abx());
+            case 0x7B -> rra(aby(opcode));
+            case 0x7F -> rra(abx(opcode));
             case 0x80, 0x82, 0x89 -> nop(imm());
             case 0x83 -> sax(izx());
             case 0x87 -> sax(zp0());
@@ -465,24 +465,24 @@ public final class Cpu {
             case 0xA3 -> lax(izx());
             case 0xA7 -> lax(zp0());
             case 0xAF -> lax(abs());
-            case 0xB3 -> lax(izy());
+            case 0xB3 -> lax(izy(opcode));
             case 0xB7 -> lax(zpy());
-            case 0xBF -> lax(aby());
+            case 0xBF -> lax(aby(opcode));
             case 0xC3 -> dcp(izx());
             case 0xC7 -> dcp(zp0());
             case 0xCF -> dcp(abs());
-            case 0xD3 -> dcp(izy());
+            case 0xD3 -> dcp(izy(opcode));
             case 0xD7 -> dcp(zpx());
-            case 0xDB -> dcp(aby());
-            case 0xDF -> dcp(abx());
+            case 0xDB -> dcp(aby(opcode));
+            case 0xDF -> dcp(abx(opcode));
             case 0xE3 -> isc(izx());
             case 0xE7 -> isc(zp0());
             case 0xEB -> sbc(imm());
             case 0xEF -> isc(abs());
-            case 0xF3 -> isc(izy());
+            case 0xF3 -> isc(izy(opcode));
             case 0xF7 -> isc(zpx());
-            case 0xFB -> isc(aby());
-            case 0xFF -> isc(abx());
+            case 0xFB -> isc(aby(opcode));
+            case 0xFF -> isc(abx(opcode));
 
             default ->
                 throw new IllegalArgumentException(String.format("Invalid opcode 0x%02X at 0x%04X", opcode, pc - 1));
@@ -514,9 +514,6 @@ public final class Cpu {
     }
 
     private int rel() {
-        if (pc == 0xe9ef) {
-            System.out.println();
-        }
         int rel = (byte) nextByte();
         return pc + rel;
     }
@@ -525,23 +522,19 @@ public final class Cpu {
         return nextWord();
     }
 
-    private int abx() {
+    private int abx(int opcode) {
         int base = nextWord();
         int address = base + x;
 
-        if ((address & 0xff00) != (base & 0xff00)) {
-            cycles++;
-        }
+        pageCrossing(address, base, opcode);
         return address;
     }
 
-    private int aby() {
+    private int aby(int opcode) {
         int base = nextWord();
         int address = base + y;
 
-        if ((address & 0xff00) != (base & 0xff00)) {
-            cycles++;
-        }
+        pageCrossing(address, base, opcode);
         return address;
     }
 
@@ -558,16 +551,28 @@ public final class Cpu {
         return (hi << 8) | lo;
     }
 
-    private int izy() {
+    private int izy(int opcode) {
         int temp = nextByte();
         int lo = read((temp) & 0x00ff);
         int hi = read((temp + 1) & 0x00ff);
-        int address = ((hi << 8) | lo) + y;
+        int base = (hi << 8) | lo;
+        int address = base + y;
 
-        if ((address & 0xff00) != (hi << 8)) {
-            cycles++;
-        }
+        pageCrossing(address, base, opcode);
         return address;
+    }
+
+    Set<Integer> pageCrossings = new TreeSet<>();
+
+    private void pageCrossing(int address, int base, int opcode) {
+        pageCrossings.add(opcode);
+        if ((address & 0xff00) != (base & 0xff00)) {
+            int extra = switch (opcode) {
+                case 0x1E, 0x3E, 0x5E, 0x7E, 0x91, 0x99, 0x9D, 0xDE, 0xFE -> 0;
+                default -> 1;
+            };
+            cycles += extra;
+        }
     }
 
     // endregion
