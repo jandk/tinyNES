@@ -4,7 +4,7 @@ import java.util.*;
 
 public final class Cpu {
 
-    private final Bus bus;
+    private final Nes nes;
 
     private int a;      // Accumulator
     private int x;      // X index register
@@ -13,8 +13,8 @@ public final class Cpu {
     private int pc;     // Program counter
     private int status; // Status register
 
-    public Cpu(Bus bus) {
-        this.bus = Objects.requireNonNull(bus);
+    public Cpu(Nes nes) {
+        this.nes = Objects.requireNonNull(nes);
         reset();
     }
 
@@ -865,7 +865,7 @@ public final class Cpu {
         if (address < 0) {
             return a;
         }
-        return Byte.toUnsignedInt(bus.read(address & 0xffff));
+        return Byte.toUnsignedInt(nes.read(address & 0xffff));
     }
 
     private void write(int address, int value) {
@@ -874,7 +874,7 @@ public final class Cpu {
             a = value;
             return;
         }
-        bus.write(address, (byte) value);
+        nes.write(address, (byte) value);
     }
 
     private int nextByte() {

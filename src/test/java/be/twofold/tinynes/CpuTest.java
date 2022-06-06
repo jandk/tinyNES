@@ -14,8 +14,8 @@ class CpuTest {
     void testCpu() {
         Rom rom = readRom();
         Cartridge cartridge = new Cartridge(rom);
-        Bus bus = new Bus(cartridge);
-        Cpu cpu = new Cpu(bus);
+        Nes nes = new Nes(cartridge);
+        Cpu cpu = new Cpu(nes);
         cpu.setPc(0xC000);
         cpu.setStatus(0x24);
 

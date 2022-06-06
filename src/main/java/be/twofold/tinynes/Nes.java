@@ -1,11 +1,11 @@
 package be.twofold.tinynes;
 
-public final class Bus {
+public final class Nes {
 
     private final Cartridge cartridge;
     private final byte[] ram = new byte[2 * 1024];
 
-    public Bus(Cartridge cartridge) {
+    public Nes(Cartridge cartridge) {
         this.cartridge = cartridge;
     }
 
