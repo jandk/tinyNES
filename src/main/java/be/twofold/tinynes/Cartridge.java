@@ -17,6 +17,7 @@ public final class Cartridge {
     private static Mapper createMapper(int mapperId, int prgBanks, int chrBanks) {
         return switch (mapperId) {
             case 0 -> new Mapper000(prgBanks, chrBanks);
+            case 1 -> new Mapper001(prgBanks, chrBanks);
             default -> throw new IllegalArgumentException("Unknown mapper: " + mapperId);
         };
     }

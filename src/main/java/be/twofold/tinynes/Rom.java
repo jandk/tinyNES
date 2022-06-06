@@ -1,6 +1,7 @@
 package be.twofold.tinynes;
 
 import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 
 public final class Rom {
@@ -15,9 +16,17 @@ public final class Rom {
         this.chr = chr;
     }
 
-    public static Rom parse(InputStream in) {
+    public static Rom load(InputStream in) {
         try {
             return new Parser(in).parse();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    public static Rom load(Path path) {
+        try (InputStream in = Files.newInputStream(path)) {
+            return load(in);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

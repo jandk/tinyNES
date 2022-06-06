@@ -11,13 +11,11 @@ import static org.assertj.core.api.Assertions.*;
 class CpuTest {
 
     @Test
-    void testCpu() {
-        Rom rom = readRom();
-        Cartridge cartridge = new Cartridge(rom);
-        Nes nes = new Nes(cartridge);
-        Cpu cpu = new Cpu(nes);
+    void testWithNesTest() {
+        Cpu cpu = load("/nestest.nes");
         cpu.setPc(0xC000);
         cpu.setStatus(0x24);
+        cpu.totalCycles = 7;
 
         List<State> states = readResults();
         for (int i = 0; i < states.size(); i++) {
@@ -27,24 +25,53 @@ class CpuTest {
         }
     }
 
+    @Test
+    void testWithBlarggInstructionTiming() {
+        Cpu cpu = load("/instr_timing.nes");
+
+        while (true) {
+            cpu.step();
+            if (cpu.read(0x6000) != 0) {
+                break;
+            }
+        }
+
+        System.out.println(cpu.totalCycles);
+    }
+
+    private Cpu load(String path) {
+        InputStream in = Main.class.getResourceAsStream(path);
+        Rom rom = Rom.load(in);
+        Cartridge cartridge = new Cartridge(rom);
+        Nes nes = new Nes(cartridge);
+        return new Cpu(nes);
+    }
+
+    @Test
+    void testWithKlaus() {
+    }
+
+    // region NesTest
+
     private void assertState(Cpu cpu, State state, int i) {
         assertValue(cpu.getA(), state.a(), i, "A");
         assertValue(cpu.getX(), state.x(), i, "X");
         assertValue(cpu.getY(), state.y(), i, "Y");
         assertValue(cpu.getSp(), state.sp(), i, "SP");
         assertValue(cpu.getPc(), state.pc(), i, "PC");
+        assertValue(cpu.totalCycles, state.cycles(), i, "cycles");
 
         int actual = cpu.getStatus() & 0xdf; // Ignore bit 5
         int expected = state.status() & 0xdf; // Ignore bit 5
         assertThat(actual)
-            .withFailMessage(() -> "Line " + i + " -- Expected flags " + dumpFlags(expected) + " but was " + dumpFlags(actual) + " at " + Integer.toHexString(state.pc()))
+            .withFailMessage(() -> "Line " + (i + 1) + " -- Expected flags " + dumpFlags(expected) + " but was " + dumpFlags(actual) + " at " + Integer.toHexString(state.pc()))
             .isEqualTo(expected);
     }
 
     private void assertValue(int actual, int expected, int i, String name) {
         assertThat(actual)
             .withFailMessage(() -> "Line %d -- Expected %s to be %s but was %s"
-                .formatted(i, name, Integer.toHexString(expected), Integer.toHexString(actual)))
+                .formatted(i + 1, name, expected, actual))
             .isEqualTo(expected);
     }
 
@@ -58,14 +85,6 @@ class CpuTest {
             ((flags & 0x04) != 0 ? 'I' : '-') +
             ((flags & 0x02) != 0 ? 'Z' : '-') +
             ((flags & 0x01) != 0 ? 'C' : '-');
-    }
-
-    private static Rom readRom() {
-        try (InputStream in = Main.class.getResourceAsStream("/nestest.nes")) {
-            return Rom.parse(in);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
     }
 
     private static List<State> readResults() {
@@ -96,7 +115,8 @@ class CpuTest {
         int y,
         int sp,
         int pc,
-        int status
+        int status,
+        int cycles
     ) {
         public static State parse(String line) {
             int a = Integer.parseInt(line.substring(50, 52), 16);
@@ -105,8 +125,11 @@ class CpuTest {
             int sp = Integer.parseInt(line.substring(71, 73), 16);
             int pc = Integer.parseInt(line.substring(0, 4), 16);
             int status = Integer.parseInt(line.substring(65, 67), 16);
-            return new State(a, x, y, sp, pc, status);
+            int cycles = Integer.parseInt(line.substring(90));
+            return new State(a, x, y, sp, pc, status, cycles);
         }
     }
+
+    // endregion
 
 }

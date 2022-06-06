@@ -4,6 +4,25 @@ import java.util.*;
 
 public final class Cpu {
 
+    private static final int[] CyclesPerInstruction = {
+        7, 6, 0, 8, 3, 3, 5, 5, 3, 2, 2, 2, 4, 4, 6, 6,
+        2, 5, 0, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
+        6, 6, 0, 8, 3, 3, 5, 5, 4, 2, 2, 2, 4, 4, 6, 6,
+        2, 5, 0, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
+        6, 6, 0, 8, 3, 3, 5, 5, 3, 2, 2, 2, 3, 4, 6, 6,
+        2, 5, 0, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
+        6, 6, 0, 8, 3, 3, 5, 5, 4, 2, 2, 2, 5, 4, 6, 6,
+        2, 5, 0, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
+        2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4,
+        2, 6, 0, 6, 4, 4, 4, 4, 2, 5, 2, 5, 5, 5, 5, 5,
+        2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4,
+        2, 5, 0, 5, 4, 4, 4, 4, 2, 4, 2, 4, 4, 4, 4, 4,
+        2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6,
+        2, 5, 0, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
+        2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6,
+        2, 5, 0, 4, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
+    };
+
     private final Nes nes;
 
     private int a;      // Accumulator
@@ -12,10 +31,48 @@ public final class Cpu {
     private int sp;     // Stack pointer
     private int pc;     // Program counter
     private int status; // Status register
+    private int cycles; // Cycles since last instruction
+
+    int totalCycles;
 
     public Cpu(Nes nes) {
         this.nes = Objects.requireNonNull(nes);
         reset();
+    }
+
+    public void clock() {
+        if (cycles == 0) {
+            int opcode = nextByte();
+            cycles = CyclesPerInstruction[opcode];
+            execute(opcode);
+        }
+        cycles--;
+        totalCycles++;
+    }
+
+    public void step() {
+        int opcode = nextByte();
+        cycles = CyclesPerInstruction[opcode];
+        execute(opcode);
+        totalCycles += cycles;
+    }
+
+    public void reset() {
+        int lo = read(0xFFFC);
+        int hi = read(0xFFFD);
+
+        a = 0;
+        x = 0;
+        y = 0;
+        sp = 0xFD;
+        pc = (hi << 8) | lo;
+        status = 0x16;
+    }
+
+    public void irq() {
+    }
+
+    public void nmi() {
     }
 
     // region Getters and Setters
@@ -175,23 +232,6 @@ public final class Cpu {
     }
 
     // endregion
-
-    public void step() {
-        int opcode = nextByte();
-        execute(opcode);
-    }
-
-    public void reset() {
-        int lo = read(0xFFFC);
-        int hi = read(0xFFFD);
-
-        a = 0;
-        x = 0;
-        y = 0;
-        sp = 0xFD;
-        pc = (hi << 8) | lo;
-        status = 0x16;
-    }
 
     // region Decoder
 
@@ -455,7 +495,7 @@ public final class Cpu {
         int address = base + x;
 
         if ((address & 0xff00) != (base & 0xff00)) {
-            // cycles++;
+            cycles++;
         }
         return address;
     }
@@ -465,7 +505,7 @@ public final class Cpu {
         int address = base + y;
 
         if ((address & 0xff00) != (base & 0xff00)) {
-            // cycles++;
+            cycles++;
         }
         return address;
     }
@@ -490,7 +530,7 @@ public final class Cpu {
         int address = ((hi << 8) | lo) + y;
 
         if ((address & 0xff00) != (hi << 8)) {
-            // cycles++;
+            cycles++;
         }
         return address;
     }
@@ -838,6 +878,8 @@ public final class Cpu {
         ora(address);
     }
 
+    // Helpers
+
     private void setZN(int value) {
         setZ(value == 0);
         setN((value & 0x80) != 0);
@@ -846,6 +888,7 @@ public final class Cpu {
     private void branch(boolean condition, int address) {
         if (condition) {
             pc = address;
+            cycles++;
         }
     }
 
@@ -861,7 +904,7 @@ public final class Cpu {
 
     // endregion
 
-    private int read(int address) {
+    int read(int address) {
         if (address < 0) {
             return a;
         }

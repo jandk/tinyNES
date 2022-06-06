@@ -1,9 +1,8 @@
 package be.twofold.tinynes;
 
-final class Mapper000 extends Mapper {
-
-    Mapper000(int prgBanks, int prgSize) {
-        super(prgBanks, prgSize);
+public class Mapper001 extends Mapper {
+    public Mapper001(int prgBanks, int chrBanks) {
+        super(prgBanks, chrBanks);
     }
 
     @Override
