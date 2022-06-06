@@ -31,11 +31,21 @@ class CpuTest {
 
         while (true) {
             cpu.step();
-            if (cpu.read(0x6000) != 0) {
+            if (cpu.read(0x6000) != 0x00 && cpu.read(0x6000) != 0x80) {
                 break;
             }
         }
 
+        StringBuilder sb = new StringBuilder();
+        for (int offset = 0x6004; ; offset++) {
+            int value = cpu.read(offset);
+            if (value == 0x00) {
+                break;
+            }
+            sb.append((char) value);
+        }
+
+        System.out.println(sb);
         System.out.println(cpu.totalCycles);
     }
 

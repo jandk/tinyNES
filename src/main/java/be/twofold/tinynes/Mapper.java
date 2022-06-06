@@ -28,4 +28,11 @@ public abstract class Mapper {
             String.format("Invalid write to address $%04X with value $%02X", address, value));
     }
 
+    enum Mirror {
+        HORIZONTAL,
+        VERTICAL,
+        ONE_SCREEN_LO,
+        ONE_SCREEN_HI
+    }
+
 }
