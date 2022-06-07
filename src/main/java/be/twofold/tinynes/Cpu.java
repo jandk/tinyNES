@@ -265,6 +265,44 @@ public final class Cpu {
 
     // endregion
 
+    // region Helpers
+
+    private void incPC() {
+        pc = (pc + 1) & 0xFFFF;
+    }
+
+    int read(int address) {
+        if (address < 0) {
+            return a;
+        }
+        return Byte.toUnsignedInt(nes.read(address & 0xffff));
+    }
+
+    private void write(int address, int value) {
+        assert value >= 0 && value <= 0xff;
+        if (address < 0) {
+            a = value;
+            return;
+        }
+        nes.write(address, (byte) value);
+    }
+
+    private int nextByte() {
+        int result = read(pc);
+        incPC();
+        return result;
+    }
+
+    private int nextWord() {
+        int lo = read(pc);
+        incPC();
+        int hi = read(pc);
+        incPC();
+        return hi << 8 | lo;
+    }
+
+    // endregion
+
     // region Decoder
 
     private void execute(int opcode) {
@@ -951,40 +989,6 @@ public final class Cpu {
     }
 
     // endregion
-
-    int read(int address) {
-        if (address < 0) {
-            return a;
-        }
-        return Byte.toUnsignedInt(nes.read(address & 0xffff));
-    }
-
-    private void write(int address, int value) {
-        assert value >= 0 && value <= 0xff;
-        if (address < 0) {
-            a = value;
-            return;
-        }
-        nes.write(address, (byte) value);
-    }
-
-    private int nextByte() {
-        int result = read(pc);
-        incPC();
-        return result;
-    }
-
-    private int nextWord() {
-        int lo = read(pc);
-        incPC();
-        int hi = read(pc);
-        incPC();
-        return hi << 8 | lo;
-    }
-
-    private void incPC() {
-        pc = (pc + 1) & 0xFFFF;
-    }
 
     @Override
     public String toString() {
