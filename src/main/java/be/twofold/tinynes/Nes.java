@@ -5,15 +5,23 @@ import java.util.*;
 public final class Nes {
 
     private final Cartridge cartridge;
-    final Cpu cpu;
-    final Ppu ppu;
+    private final Cpu cpu;
+    private final Ppu ppu;
     private final byte[] ram = new byte[2 * 1024];
-    private int clockCounter = 0;
+    public int clockCounter = 0;
 
     public Nes(Cartridge cartridge) {
         this.cartridge = Objects.requireNonNull(cartridge);
         this.cpu = new Cpu(this);
         this.ppu = new Ppu(cartridge);
+    }
+
+    public Cpu getCpu() {
+        return cpu;
+    }
+
+    public Ppu getPpu() {
+        return ppu;
     }
 
     public void clock() {
@@ -37,6 +45,13 @@ public final class Nes {
         }
     }
 
+    public void runFrame() {
+        clock();
+        while (ppu.row != 0 || ppu.col != 0) {
+            clock();
+        }
+    }
+
     public byte read(int address) {
         if (address >= 0x0000 && address <= 0x1FFF) {
             return ram[address & 0x07FF];
@@ -50,7 +65,7 @@ public final class Nes {
                 // System.err.println("Read from APU: " + Util.hex4(address));
                 return 0;
             }
-            System.err.println("Read from IO: " + Util.hex4(address));
+            // System.err.println("Read from IO: " + Util.hex4(address));
             return 0;
         }
         if (address >= 0x4020 && address <= 0xFFFF) {
@@ -73,7 +88,7 @@ public final class Nes {
                 // System.err.println("Write to APU: " + Util.hex4(address) + " -- " + Util.hex2(value));
                 return;
             }
-            System.err.println("Write to IO: " + Util.hex4(address) + " -- " + Util.hex2(value));
+            // System.err.println("Write to IO: " + Util.hex4(address) + " -- " + Util.hex2(value));
             return;
         }
         if (address >= 0x4020 && address <= 0xFFFF) {

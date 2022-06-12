@@ -2,7 +2,6 @@ package be.twofold.tinynes;
 
 import org.junit.jupiter.api.*;
 
-import javax.imageio.*;
 import java.io.*;
 import java.nio.charset.*;
 import java.util.*;
@@ -15,14 +14,14 @@ class CpuTest {
     @Test
     void testWithNesTest() {
         Nes nes = load("/nestest.nes");
-        nes.cpu.setPc(0xC000);
-        nes.cpu.setStatus(0x24);
-        nes.cpu.totalCycles = 7;
+        nes.getCpu().setPc(0xC000);
+        nes.getCpu().setStatus(0x24);
+        nes.getCpu().totalCycles = 7;
 
         List<State> states = readResults();
         for (int i = 0; i < states.size(); i++) {
             State state = states.get(i);
-            assertState(nes.cpu, state, i);
+            assertState(nes.getCpu(), state, i);
             nes.step();
         }
     }
@@ -48,7 +47,7 @@ class CpuTest {
         }
 
         System.out.println(sb);
-        System.out.println(nes.cpu.totalCycles);
+        System.out.println(nes.getCpu().totalCycles);
     }
 
     @Test
@@ -58,21 +57,21 @@ class CpuTest {
         List<Integer> pcs = new ArrayList<>();
         // for (int i = 0; i < 1000; i++) {
         while (true) {
-            pcs.add(nes.cpu.getPc());
+            pcs.add(nes.getCpu().getPc());
             nes.step();
-            if (nes.cpu.getPc() == 0xEA5A) {
+            if (nes.getCpu().getPc() == 0xEA5A) {
                 break;
             }
         }
 
-        ImageIO.write(nes.ppu.drawBackground(0, 0), "png", new File("C:\\Temp\\bg-0-0.png"));
+        // ImageIO.write(nes.getPpu().drawBackground(0, 0), "png", new File("C:\\Temp\\bg-0-0.png"));
 
         String lastPCs = pcs.subList(pcs.size() - 10, pcs.size()).stream()
             .map(Util::hex4)
             .collect(Collectors.joining(", "));
 
         System.out.println(lastPCs);
-        System.out.println(nes.cpu.totalCycles);
+        System.out.println(nes.getCpu().totalCycles);
     }
 
     private Nes load(String path) {

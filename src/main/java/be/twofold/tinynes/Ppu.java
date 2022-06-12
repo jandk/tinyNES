@@ -27,15 +27,15 @@ public final class Ppu {
 
     // Running counters
     boolean nmi;
-    int row;
-    int col;
+    int row = 0;
+    int col = 0;
 
     public Ppu(Cartridge cartridge) {
         this.cartridge = cartridge;
     }
 
     public void clock() {
-        if (row == -1 && col == 1) {
+        if (row == 261 && col == 1) {
             ppuStatus &= 0x7F; // Clear VBlank flag
         }
         if (row == 241 && col == 1) {
@@ -46,11 +46,11 @@ public final class Ppu {
         }
 
         col++;
-        if (col == 341) {
+        if (col > 340) {
             col = 0;
             row++;
-            if (row == 261) {
-                row = -1;
+            if (row > 261) {
+                row = 0;
             }
         }
     }
@@ -109,31 +109,28 @@ public final class Ppu {
         switch (address & 0x07) {
             case 0 -> writePpuCtrl(value);
             case 1 -> writePpuMask(value);
-            case 2 -> throw new UnsupportedOperationException();
-            case 3 -> throw new UnsupportedOperationException();
-            case 4 -> throw new UnsupportedOperationException();
             case 5 -> writePpuScroll(value);
             case 6 -> writePpuAddress(value);
             case 7 -> writePpuData(value);
-            default -> throw new IllegalArgumentException("Invalid address: " + Util.hex4(address));
+            default ->
+                throw new UnsupportedOperationException("Writing to PPU " + Util.hex4(address) + ": " + Util.hex2(value));
         }
     }
 
     private void writePpuCtrl(byte value) {
         ppuCtrl = Byte.toUnsignedInt(value);
-        dumpRegister(ppuCtrl, "VPHBSINN", "PPUCTRL");
+        // dumpRegister(ppuCtrl, "VPHBSINN", "PPUCTRL");
     }
 
     private void writePpuMask(byte value) {
         ppuMask = Byte.toUnsignedInt(value);
-        dumpRegister(ppuMask, "BGRsbMmG", "PPUMASK");
+        // dumpRegister(ppuMask, "BGRsbMmG", "PPUMASK");
     }
 
     private void writePpuScroll(byte value) {
         if (latch) {
             ppuScrollY = Byte.toUnsignedInt(value);
             latch = false;
-            System.out.println("ScrollX: " + Util.hex2(ppuScrollX) + ", ScrollY: " + Util.hex2(ppuScrollY));
         } else {
             ppuScrollX = Byte.toUnsignedInt(value);
             latch = true;
@@ -145,7 +142,6 @@ public final class Ppu {
             ppuAddrTemp |= Byte.toUnsignedInt(value);
             ppuAddr = ppuAddrTemp;
             latch = false;
-            System.out.println("PPU Address: " + Util.hex4(ppuAddr));
         } else {
             ppuAddrTemp = Byte.toUnsignedInt(value) << 8;
             latch = true;
@@ -169,16 +165,15 @@ public final class Ppu {
         System.out.println(name + " :" + sb);
     }
 
-    private byte[] drawBackgroundArray(int nti, int pti) {
-        byte[] pixels = new byte[256 * 240];
+    public void drawBackgroundArray(byte[] pixels, int nti, int pti) {
         byte[] nameTable = this.nameTable[nti];
         for (int y = 0; y < 30; y++) {
             for (int x = 0; x < 32; x++) {
                 int tile = nameTable[y * 32 + x];
-                int tileX = tile % 16;
-                int tileY = tile / 16;
+                int tileX = (tile % 16);
+                int tileY = (tile / 16);
                 for (int row = 0; row < 8; row++) {
-                    int offset = tileY * 256 + tileX * 16;
+                    int offset = (tileY * 256) + (tileX * 16);
                     byte tileLsb = patternTable[pti][offset + row + 0];
                     byte tileMsb = patternTable[pti][offset + row + 8];
                     for (int col = 0; col < 8; col++) {
@@ -194,7 +189,6 @@ public final class Ppu {
                 }
             }
         }
-        return pixels;
     }
 
 }

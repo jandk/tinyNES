@@ -1,17 +1,11 @@
 package be.twofold.tinynes;
 
-import javafx.embed.swing.*;
-import javafx.scene.image.*;
-
-import javax.imageio.*;
 import java.awt.image.*;
 import java.io.*;
-import java.nio.*;
-import java.util.*;
 
 public final class Palette {
 
-    private static final int[] Palette = loadPalette();
+    public static final int[] Palette = loadPalette();
     private static final IndexColorModel ColorModel = createColorModel();
 
     private static int[] loadPalette() {
@@ -48,29 +42,29 @@ public final class Palette {
         return new IndexColorModel(4, Palette.length, r, g, b);
     }
 
-    public static void main(String[] args) throws IOException {
-        int width = 16 * 16;
-        int height = 16 * 4;
-        int area = width * height;
-        int[] pixels = new int[area];
-        Arrays.fill(pixels, 0xff808080);
-        PixelBuffer<IntBuffer> buffer = new PixelBuffer<>(width, height, IntBuffer.wrap(pixels), PixelFormat.getIntArgbPreInstance());
-        WritableImage image = new WritableImage(buffer);
-
-        for (int y = 0; y < 4; y++) {
-            for (int x = 0; x < 16; x++) {
-                for (int yy = 1; yy < 15; yy++) {
-                    for (int xx = 1; xx < 15; xx++) {
-                        int finalX = x * 16 + xx;
-                        int finalY = y * 16 + yy;
-                        pixels[finalY * width + finalX] = Palette[y * 16 + x];
-                    }
-                }
-            }
-        }
-
-        BufferedImage oldImage = SwingFXUtils.fromFXImage(image, null);
-        ImageIO.write(oldImage, "png", new File("C:\\Temp\\palette.png"));
-    }
+//    public static void main(String[] args) throws IOException {
+//        int width = 16 * 16;
+//        int height = 16 * 4;
+//        int area = width * height;
+//        int[] pixels = new int[area];
+//        Arrays.fill(pixels, 0xff808080);
+//        PixelBuffer<IntBuffer> buffer = new PixelBuffer<>(width, height, IntBuffer.wrap(pixels), PixelFormat.getIntArgbPreInstance());
+//        WritableImage image = new WritableImage(buffer);
+//
+//        for (int y = 0; y < 4; y++) {
+//            for (int x = 0; x < 16; x++) {
+//                for (int yy = 1; yy < 15; yy++) {
+//                    for (int xx = 1; xx < 15; xx++) {
+//                        int finalX = x * 16 + xx;
+//                        int finalY = y * 16 + yy;
+//                        pixels[finalY * width + finalX] = Palette[y * 16 + x];
+//                    }
+//                }
+//            }
+//        }
+//
+//        BufferedImage oldImage = SwingFXUtils.fromFXImage(image, null);
+//        ImageIO.write(oldImage, "png", new File("C:\\Temp\\palette.png"));
+//    }
 
 }
