@@ -1,6 +1,6 @@
 package be.twofold.tinynes;
 
-public class Mapper001 extends Mapper {
+public final class Mapper001 extends Mapper {
     private int loader;
     private int loaderCount;
     private int control;

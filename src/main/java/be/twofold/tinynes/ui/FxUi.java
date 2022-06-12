@@ -47,7 +47,7 @@ public class FxUi extends Application {
         primaryStage.sizeToScene();
         primaryStage.show();
 
-        loadRom(Path.of("src/test/resources/cpu_timing_test.nes"));
+        loadRom(Path.of("src/test/resources/nestest.nes"));
         timer.start();
     }
 
@@ -85,7 +85,7 @@ public class FxUi extends Application {
     private void update(long now) {
         if (nes != null) {
             nes.runFrame();
-            nes.getPpu().drawBackgroundArray(frameBuffer, 0, 0);
+            nes.getPpu().drawBackgroundArray(frameBuffer);
             convertFrameBuffer();
             GraphicsContext gc = canvas.getGraphicsContext2D();
             gc.drawImage(image, 0, 0, Width * Scale, Height * Scale);

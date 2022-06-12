@@ -3,11 +3,10 @@ package be.twofold.tinynes;
 public final class Ppu {
 
     private final Cartridge cartridge;
-    private final byte[] ram = new byte[0x3fff];
 
     // Palette
-    private final byte[][] nameTable = new byte[4][0x400];
-    private final byte[][] patternTable = new byte[2][0x1000];
+    private final byte[] nameTable = new byte[0x1000];
+    private final byte[] patternTable = new byte[0x2000];
     private final byte[] palette = new byte[0x20];
 
     // PPU Address Logic
@@ -34,13 +33,29 @@ public final class Ppu {
         this.cartridge = cartridge;
     }
 
+    // region Properties
+
+    public int getNameTable() {
+        return 0x2000 + ((ppuCtrl & 0x03) << 10);
+    }
+
+    public int getPatternTable() {
+        return (ppuCtrl & 0x10) << 12;
+    }
+
+    public boolean isNmiEnabled() {
+        return (ppuCtrl & 0x80) != 0;
+    }
+
+    // endregion
+
     public void clock() {
         if (row == 261 && col == 1) {
             ppuStatus &= 0x7F; // Clear VBlank flag
         }
         if (row == 241 && col == 1) {
             ppuStatus |= 0x80; // Set VBlank flag
-            if ((ppuCtrl & 0x80) != 0) {
+            if (isNmiEnabled()) {
                 nmi = true;
             }
         }
@@ -55,20 +70,25 @@ public final class Ppu {
         }
     }
 
+    private byte ppuRead(int address) {
+        if (address >= 0x0000 && address <= 0x1FFF) {
+            return cartridge.ppuRead(address);
+        }
+        if (address >= 0x2000 && address <= 0x3FFF) {
+            return nameTable[address & 0x0FFF];
+        }
+        throw new IllegalArgumentException("Illegal PPU read: " + Util.hex4(address));
+    }
+
     private void ppuWrite(int address, byte data) {
         if (address >= 0x0000 && address <= 0x1FFF) {
-            patternTable[address >>> 13][address & 0x1FFF] = data;
+            cartridge.ppuWrite(address, data);
+            return;
         }
         if (address >= 0x2000 && address <= 0x3EFF) {
             address &= 0x0FFF;
-            if (address >= 0x0000 && address <= 0x03FF)
-                nameTable[0][address & 0x03FF] = data;
-            if (address >= 0x0400 && address <= 0x07FF)
-                nameTable[0][address & 0x03FF] = data;
-            if (address >= 0x0800 && address <= 0x0BFF)
-                nameTable[1][address & 0x03FF] = data;
-            if (address >= 0x0C00 && address <= 0x0FFF)
-                nameTable[1][address & 0x03FF] = data;
+            nameTable[address] = data;
+            return;
         }
         if (address >= 0X3F00 && address <= 0X3FFF) {
             address = address & 0x1F;
@@ -80,7 +100,9 @@ public final class Ppu {
                 default -> address;
             };
             palette[address] = data;
+            return;
         }
+        throw new IllegalArgumentException("Illegal PPU write: " + Util.hex4(address));
     }
 
     public byte read(int address) {
@@ -165,28 +187,31 @@ public final class Ppu {
         System.out.println(name + " :" + sb);
     }
 
-    public void drawBackgroundArray(byte[] pixels, int nti, int pti) {
-        byte[] nameTable = this.nameTable[nti];
+    public void drawBackgroundArray(byte[] pixels) {
         for (int y = 0; y < 30; y++) {
             for (int x = 0; x < 32; x++) {
-                int tile = nameTable[y * 32 + x];
-                int tileX = (tile % 16);
-                int tileY = (tile / 16);
-                for (int row = 0; row < 8; row++) {
-                    int offset = (tileY * 256) + (tileX * 16);
-                    byte tileLsb = patternTable[pti][offset + row + 0];
-                    byte tileMsb = patternTable[pti][offset + row + 8];
-                    for (int col = 0; col < 8; col++) {
-                        int shift = 7 - col;
-                        int msb = (tileMsb & (1 << shift)) >> shift;
-                        int lsb = (tileLsb & (1 << shift)) >> shift;
-                        int color = msb + lsb;
+                renderTile(pixels, y, x);
+            }
+        }
+    }
 
-                        int xx = x * 8 + col;
-                        int yy = y * 8 + row;
-                        pixels[yy * 256 + xx] = palette[color];
-                    }
-                }
+    private void renderTile(byte[] pixels, int y, int x) {
+        int tile = ppuRead(getNameTable() + (y * 32 + x));
+        int tileX = (tile % 16);
+        int tileY = (tile / 16);
+        for (int row = 0; row < 8; row++) {
+            int offset = (tileY * 256) + (tileX * 16);
+            byte tileLsb = ppuRead(getPatternTable() + (offset + row + 0));
+            byte tileMsb = ppuRead(getPatternTable() + (offset + row + 8));
+            for (int col = 0; col < 8; col++) {
+                int shift = 7 - col;
+                int msb = (tileMsb & (1 << shift)) >> shift;
+                int lsb = (tileLsb & (1 << shift)) >> shift;
+                int color = msb + lsb;
+
+                int xx = x * 8 + col;
+                int yy = y * 8 + row;
+                pixels[yy * 256 + xx] = palette[color];
             }
         }
     }

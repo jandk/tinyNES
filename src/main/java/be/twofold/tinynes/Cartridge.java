@@ -5,7 +5,8 @@ public final class Cartridge {
     private final Mapper mapper;
     private final byte[] prg;
     private final byte[] chr;
-    private final byte[] ram;
+    private final byte[] prgRam;
+    private final byte[] chrRam;
 
     public Cartridge(Rom rom) {
         int prgBanks = rom.getPrg().length / 0x4000;
@@ -13,7 +14,8 @@ public final class Cartridge {
         this.mapper = createMapper(rom.getMapperId(), prgBanks, chrBanks);
         this.prg = rom.getPrg();
         this.chr = rom.getChr();
-        this.ram = createRam(rom.getMapperId());
+        this.prgRam = createPrgRam(rom.getMapperId());
+        this.chrRam = chrBanks == 0 ? new byte[0x1000] : null;
     }
 
     private static Mapper createMapper(int mapperId, int prgBanks, int chrBanks) {
@@ -24,7 +26,7 @@ public final class Cartridge {
         };
     }
 
-    private byte[] createRam(int mapperId) {
+    private byte[] createPrgRam(int mapperId) {
         return switch (mapperId) {
             case 0 -> null;
             case 1 -> new byte[0x2000];
@@ -33,24 +35,32 @@ public final class Cartridge {
     }
 
     public byte cpuRead(int address) {
-        if (ram != null && address >= 0x6000 && address <= 0x7FFF) {
-            return ram[address & 0x1FFF];
+        if (prgRam != null && address >= 0x6000 && address <= 0x7FFF) {
+            return prgRam[address & 0x1FFF];
         }
         return prg[mapper.cpuRead(address)];
     }
 
     public void cpuWrite(int address, byte value) {
-        if (ram != null && address >= 0x6000 && address <= 0x7FFF) {
-            ram[address & 0x1FFF] = value;
+        if (prgRam != null && address >= 0x6000 && address <= 0x7FFF) {
+            prgRam[address & 0x1FFF] = value;
+            return;
         }
         mapper.cpuWrite(address, value);
     }
 
     public byte ppuRead(int address) {
+        if (chrRam != null && address >= 0x0000 && address <= 0x1FFF) {
+            return chrRam[address & 0x0FFF];
+        }
         return chr[mapper.ppuRead(address)];
     }
 
     public void ppuWrite(int address, byte value) {
+        if (chrRam != null && address >= 0x0000 && address <= 0x1FFF) {
+            chrRam[address & 0x0FFF] = value;
+            return;
+        }
         mapper.ppuWrite(address, value);
     }
 
