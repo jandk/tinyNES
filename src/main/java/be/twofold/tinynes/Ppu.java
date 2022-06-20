@@ -5,9 +5,10 @@ public final class Ppu {
     private final Cartridge cartridge;
 
     // Palette
+    private final byte[] frameBuffer = new byte[256 * 240];
     private final byte[] nameTable = new byte[0x1000];
-    private final byte[] patternTable = new byte[0x2000];
     private final byte[] palette = new byte[0x20];
+    private final byte[] oam = new byte[0x100];
 
     // PPU Address Logic
     private boolean latch;
@@ -33,6 +34,73 @@ public final class Ppu {
         this.cartridge = cartridge;
     }
 
+    // region Flags
+
+    // PPUCTRL
+
+
+    // PPUMASK
+
+    public boolean grayScale() {
+        return (ppuMask & 0x01) != 0;
+    }
+
+    public boolean renderBackgroundLeft() {
+        return (ppuMask & 0x02) != 0;
+    }
+
+    public boolean renderSpritesLeft() {
+        return (ppuMask & 0x04) != 0;
+    }
+
+    public boolean renderBackground() {
+        return (ppuMask & 0x08) != 0;
+    }
+
+    public boolean renderSprites() {
+        return (ppuMask & 0x10) != 0;
+    }
+
+    public boolean emphasizeRed() {
+        return (ppuMask & 0x20) != 0;
+    }
+
+    public boolean emphasizeGreen() {
+        return (ppuMask & 0x40) != 0;
+    }
+
+    public boolean emphasizeBlue() {
+        return (ppuMask & 0x80) != 0;
+    }
+
+    // PPUSTATUS
+
+    public boolean verticalBlank() {
+        return (ppuStatus & 0x80) != 0;
+    }
+
+    public void setVerticalBlank(boolean value) {
+        ppuStatus = (byte) ((ppuStatus & 0x7F) | (value ? 0x80 : 0x00));
+    }
+
+    public boolean spriteZeroHit() {
+        return (ppuStatus & 0x40) != 0;
+    }
+
+    public void setSpriteZeroHit(boolean value) {
+        ppuStatus = (byte) ((ppuStatus & 0xBF) | (value ? 0x40 : 0x00));
+    }
+
+    public boolean spriteOverflow() {
+        return (ppuStatus & 0x20) != 0;
+    }
+
+    public void setSpriteOverflow(boolean value) {
+        ppuStatus = (byte) ((ppuStatus & 0xDF) | (value ? 0x20 : 0x00));
+    }
+
+    // endregion
+
     // region Properties
 
     public int getNameTable() {
@@ -40,7 +108,7 @@ public final class Ppu {
     }
 
     public int getPatternTable() {
-        return (ppuCtrl & 0x10) << 12;
+        return (ppuCtrl & 0x10) << 8;
     }
 
     public boolean isNmiEnabled() {
@@ -51,10 +119,10 @@ public final class Ppu {
 
     public void clock() {
         if (row == 261 && col == 1) {
-            ppuStatus &= 0x7F; // Clear VBlank flag
+            setVerticalBlank(false); // Clear VBlank flag
         }
         if (row == 241 && col == 1) {
-            ppuStatus |= 0x80; // Set VBlank flag
+            setVerticalBlank(true); // Set VBlank flag
             if (isNmiEnabled()) {
                 nmi = true;
             }
@@ -105,15 +173,10 @@ public final class Ppu {
         throw new IllegalArgumentException("Illegal PPU write: " + Util.hex4(address));
     }
 
-    public byte read(int address) {
+    public byte cpuRead(int address) {
         return (byte) switch (address & 0x07) {
-            case 0 -> throw new UnsupportedOperationException();
-            case 1 -> throw new UnsupportedOperationException();
             case 2 -> readPpuStatus();
-            case 3 -> throw new UnsupportedOperationException();
-            case 4 -> throw new UnsupportedOperationException();
-            case 5 -> throw new UnsupportedOperationException();
-            case 6 -> throw new UnsupportedOperationException();
+            case 4 -> readOam();
             case 7 -> throw new UnsupportedOperationException();
             default -> throw new IllegalArgumentException("Invalid address: " + Util.hex4(address));
         };
@@ -124,13 +187,17 @@ public final class Ppu {
         return ppuStatus;
     }
 
-    public void write(int address, byte value) {
-        if (address >= 0x2002 && address <= 0x2004) {
-            System.out.println("Writing to PPU " + Util.hex4(address) + ": " + Util.hex2(value));
-        }
+    private byte readOam() {
+        return oam[oamAddr];
+    }
+
+    public void cpuWrite(int address, byte value) {
         switch (address & 0x07) {
             case 0 -> writePpuCtrl(value);
             case 1 -> writePpuMask(value);
+            case 2 -> writePpuStatus(value);
+            case 3 -> writeOamAddress(value);
+            case 4 -> writeOamData(value);
             case 5 -> writePpuScroll(value);
             case 6 -> writePpuAddress(value);
             case 7 -> writePpuData(value);
@@ -141,33 +208,41 @@ public final class Ppu {
 
     private void writePpuCtrl(byte value) {
         ppuCtrl = Byte.toUnsignedInt(value);
-        // dumpRegister(ppuCtrl, "VPHBSINN", "PPUCTRL");
     }
 
     private void writePpuMask(byte value) {
         ppuMask = Byte.toUnsignedInt(value);
-        // dumpRegister(ppuMask, "BGRsbMmG", "PPUMASK");
+    }
+
+    private void writePpuStatus(byte value) {
+        // Do nothing
+    }
+
+    private void writeOamAddress(byte value) {
+        oamAddr = Byte.toUnsignedInt(value);
+    }
+
+    private void writeOamData(byte value) {
+        oam[oamAddr] = value;
     }
 
     private void writePpuScroll(byte value) {
-        if (latch) {
-            ppuScrollY = Byte.toUnsignedInt(value);
-            latch = false;
-        } else {
+        if (!latch) {
             ppuScrollX = Byte.toUnsignedInt(value);
-            latch = true;
+        } else {
+            ppuScrollY = Byte.toUnsignedInt(value);
         }
+        latch = !latch;
     }
 
     private void writePpuAddress(byte value) {
-        if (latch) {
-            ppuAddrTemp |= Byte.toUnsignedInt(value);
-            ppuAddr = ppuAddrTemp;
-            latch = false;
+        if (!latch) {
+            ppuAddrTemp = (value & 0xFF) << 8;
         } else {
-            ppuAddrTemp = Byte.toUnsignedInt(value) << 8;
-            latch = true;
+            ppuAddrTemp |= value & 0xFF;
+            ppuAddr = ppuAddrTemp;
         }
+        latch = !latch;
     }
 
     private void writePpuData(byte value) {
@@ -207,7 +282,7 @@ public final class Ppu {
                 int shift = 7 - col;
                 int msb = (tileMsb & (1 << shift)) >> shift;
                 int lsb = (tileLsb & (1 << shift)) >> shift;
-                int color = msb + lsb;
+                int color = (msb << 1) + lsb;
 
                 int xx = x * 8 + col;
                 int yy = y * 8 + row;

@@ -58,7 +58,7 @@ public final class Nes {
         }
         if (address >= 0x2000 && address <= 0x3FFF) {
             // System.err.println("Read from PPU: " + Util.hex4(address));
-            return ppu.read(address);
+            return ppu.cpuRead(address);
         }
         if (address >= 0x4000 && address <= 0x401F) {
             if (address <= 0x4013 || address == 0x4015 || address == 0x4017) {
@@ -80,7 +80,7 @@ public final class Nes {
             return;
         }
         if (address >= 0x2000 && address <= 0x3FFF) {
-            ppu.write(address, value);
+            ppu.cpuWrite(address, value);
             return;
         }
         if (address >= 0x4000 && address <= 0x401F) {

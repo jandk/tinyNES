@@ -86,7 +86,7 @@ public class FxUi extends Application {
         if (nes != null) {
             nes.runFrame();
             nes.getPpu().drawBackgroundArray(frameBuffer);
-            convertFrameBuffer();
+            convertFrameBuffer(frameBuffer);
             GraphicsContext gc = canvas.getGraphicsContext2D();
             gc.drawImage(image, 0, 0, Width * Scale, Height * Scale);
             gc.setFill(Color.WHITE);
@@ -94,13 +94,7 @@ public class FxUi extends Application {
         }
     }
 
-    private void convertFrameBuffer() {
-        int[] counts = new int[64];
-        for (int i = 0; i < frameBuffer.length; i++) {
-            counts[frameBuffer[i]]++;
-        }
-        System.out.println("counts = " + Arrays.toString(counts));
-
+    private void convertFrameBuffer(byte[] frameBuffer) {
         pixelBuffer.updateBuffer(pixelBuffer -> {
             int[] buffer = pixelBuffer.getBuffer().array();
             for (int i = 0; i < Width * Height; i++) {
