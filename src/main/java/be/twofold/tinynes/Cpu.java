@@ -25,12 +25,12 @@ public final class Cpu {
 
     private final Nes nes;
 
-    private int a;      // Accumulator
-    private int x;      // X index register
-    private int y;      // Y index register
-    private int sp;     // Stack pointer
-    private int pc;     // Program counter
-    private int status; // Status register
+    private int a;  // Accumulator
+    private int x;  // X index register
+    private int y;  // Y index register
+    private int sp; // Stack pointer
+    private int pc; // Program counter
+    private int st; // Status register
     int cycles; // Cycles since last instruction
 
     private final Tracer tracer = new Tracer();
@@ -68,7 +68,7 @@ public final class Cpu {
         y = 0;
         sp = 0xFD;
         setPc((hi << 8) | lo);
-        status = 0x16;
+        st = 0x16;
     }
 
     public void irq() {
@@ -82,7 +82,7 @@ public final class Cpu {
         setB(false);
         setU(true);
         setI(true);
-        push(status);
+        push(st);
 
         int lo = read(0xFFFE);
         int hi = read(0xFFFF);
@@ -98,7 +98,7 @@ public final class Cpu {
         setB(false);
         setU(true);
         setI(true);
-        push(status);
+        push(st);
 
         int lo = read(0xFFFA);
         int hi = read(0xFFFB);
@@ -123,7 +123,7 @@ public final class Cpu {
     }
 
     public void setX(int x) {
-        assert 0x00 <= a && a <= 0xFF;
+        assert 0x00 <= x && x <= 0xFF;
         this.x = x;
     }
 
@@ -132,7 +132,7 @@ public final class Cpu {
     }
 
     public void setY(int y) {
-        assert 0x00 <= a && a <= 0xFF;
+        assert 0x00 <= y && y <= 0xFF;
         this.y = y;
     }
 
@@ -141,7 +141,7 @@ public final class Cpu {
     }
 
     public void setSp(int sp) {
-        assert 0x00 <= a && a <= 0xFF;
+        assert 0x00 <= sp && sp <= 0xFF;
         this.sp = sp;
     }
 
@@ -150,17 +150,17 @@ public final class Cpu {
     }
 
     public void setPc(int pc) {
-        // assert 0x0000 <= a && a <= 0xFFFF;
+        assert 0x0000 <= pc && pc <= 0xFFFF;
         this.pc = pc;
     }
 
-    public int getStatus() {
-        return status;
+    public int getSt() {
+        return st;
     }
 
-    public void setStatus(int status) {
-        assert 0x00 <= a && a <= 0xFF;
-        this.status = status;
+    public void setSt(int st) {
+        assert 0x00 <= st && st <= 0xFF;
+        this.st = st;
     }
 
     // endregion
@@ -168,99 +168,67 @@ public final class Cpu {
     // region Flags
 
     public boolean getC() {
-        return (status & 0x01) != 0;
+        return (st & 0x01) != 0;
     }
 
     public boolean getZ() {
-        return (status & 0x02) != 0;
+        return (st & 0x02) != 0;
     }
 
     public boolean getI() {
-        return (status & 0x04) != 0;
+        return (st & 0x04) != 0;
     }
 
     public boolean getD() {
-        return (status & 0x08) != 0;
+        return (st & 0x08) != 0;
     }
 
     public boolean getB() {
-        return (status & 0x10) != 0;
+        return (st & 0x10) != 0;
     }
 
     public boolean getU() {
-        return (status & 0x20) != 0;
+        return (st & 0x20) != 0;
     }
 
     public boolean getV() {
-        return (status & 0x40) != 0;
+        return (st & 0x40) != 0;
     }
 
     public boolean getN() {
-        return (status & 0x80) != 0;
+        return (st & 0x80) != 0;
     }
 
     public void setC(boolean value) {
-        if (value) {
-            status |= 0x01;
-        } else {
-            status &= 0xfe;
-        }
+        st = value ? st | 0x01 : st & 0xfe;
     }
 
     public void setZ(boolean value) {
-        if (value) {
-            status |= 0x02;
-        } else {
-            status &= 0xfd;
-        }
+        st = value ? st | 0x02 : st & 0xfd;
     }
 
     public void setI(boolean value) {
-        if (value) {
-            status |= 0x04;
-        } else {
-            status &= 0xfb;
-        }
+        st = value ? st | 0x04 : st & 0xfb;
     }
 
     public void setD(boolean value) {
-        if (value) {
-            status |= 0x08;
-        } else {
-            status &= 0xf7;
-        }
+        st = value ? st | 0x08 : st & 0xf7;
     }
 
     public void setB(boolean value) {
-        if (value) {
-            status |= 0x10;
-        } else {
-            status &= 0xef;
-        }
+        st = value ? st | 0x10 : st & 0xef;
     }
 
     public void setU(boolean value) {
-        if (value) {
-            status |= 0x20;
-        } else {
-            status &= 0xdf;
-        }
+        st = value ? st | 0x20 : st & 0xdf;
     }
 
     public void setV(boolean value) {
-        if (value) {
-            status |= 0x40;
-        } else {
-            status &= 0xbf;
-        }
+        st = value ? st | 0x40 : st & 0xbf;
     }
 
     public void setN(boolean value) {
-        if (value) {
-            status |= 0x80;
-        } else {
-            status &= 0x7f;
-        }
+        st = value ? st | 0x80 : st & 0x7f;
     }
 
     // endregion
@@ -308,11 +276,11 @@ public final class Cpu {
     private void execute(int opcode) {
         switch (opcode) {
             // Standard Opcodes
-            case 0x00 -> brk(imp());
+            case 0x00 -> brk();
             case 0x01 -> ora(izx());
             case 0x05 -> ora(zp0());
             case 0x06 -> asl(zp0());
-            case 0x08 -> php(imp());
+            case 0x08 -> php();
             case 0x09 -> ora(imm());
             case 0x0A -> asl(imp());
             case 0x0D -> ora(abs());
@@ -321,7 +289,7 @@ public final class Cpu {
             case 0x11 -> ora(izy(opcode));
             case 0x15 -> ora(zpx());
             case 0x16 -> asl(zpx());
-            case 0x18 -> clc(imp());
+            case 0x18 -> clc();
             case 0x19 -> ora(aby(opcode));
             case 0x1D -> ora(abx(opcode));
             case 0x1E -> asl(abx(opcode));
@@ -330,7 +298,7 @@ public final class Cpu {
             case 0x24 -> bit(zp0());
             case 0x25 -> and(zp0());
             case 0x26 -> rol(zp0());
-            case 0x28 -> plp(imp());
+            case 0x28 -> plp();
             case 0x29 -> and(imm());
             case 0x2A -> rol(imp());
             case 0x2C -> bit(abs());
@@ -340,15 +308,15 @@ public final class Cpu {
             case 0x31 -> and(izy(opcode));
             case 0x35 -> and(zpx());
             case 0x36 -> rol(zpx());
-            case 0x38 -> sec(imp());
+            case 0x38 -> sec();
             case 0x39 -> and(aby(opcode));
             case 0x3D -> and(abx(opcode));
             case 0x3E -> rol(abx(opcode));
-            case 0x40 -> rti(imp());
+            case 0x40 -> rti();
             case 0x41 -> eor(izx());
             case 0x45 -> eor(zp0());
             case 0x46 -> lsr(zp0());
-            case 0x48 -> pha(imp());
+            case 0x48 -> pha();
             case 0x49 -> eor(imm());
             case 0x4A -> lsr(imp());
             case 0x4C -> jmp(abs());
@@ -358,15 +326,15 @@ public final class Cpu {
             case 0x51 -> eor(izy(opcode));
             case 0x55 -> eor(zpx());
             case 0x56 -> lsr(zpx());
-            case 0x58 -> cli(imp());
+            case 0x58 -> cli();
             case 0x59 -> eor(aby(opcode));
             case 0x5D -> eor(abx(opcode));
             case 0x5E -> lsr(abx(opcode));
-            case 0x60 -> rts(imp());
+            case 0x60 -> rts();
             case 0x61 -> adc(izx());
             case 0x65 -> adc(zp0());
             case 0x66 -> ror(zp0());
-            case 0x68 -> pla(imp());
+            case 0x68 -> pla();
             case 0x69 -> adc(imm());
             case 0x6A -> ror(imp());
             case 0x6C -> jmp(ind());
@@ -376,7 +344,7 @@ public final class Cpu {
             case 0x71 -> adc(izy(opcode));
             case 0x75 -> adc(zpx());
             case 0x76 -> ror(zpx());
-            case 0x78 -> sei(imp());
+            case 0x78 -> sei();
             case 0x79 -> adc(aby(opcode));
             case 0x7D -> adc(abx(opcode));
             case 0x7E -> ror(abx(opcode));
@@ -384,8 +352,8 @@ public final class Cpu {
             case 0x84 -> sty(zp0());
             case 0x85 -> sta(zp0());
             case 0x86 -> stx(zp0());
-            case 0x88 -> dey(imp());
-            case 0x8A -> txa(imp());
+            case 0x88 -> dey();
+            case 0x8A -> txa();
             case 0x8C -> sty(abs());
             case 0x8D -> sta(abs());
             case 0x8E -> stx(abs());
@@ -394,9 +362,9 @@ public final class Cpu {
             case 0x94 -> sty(zpx());
             case 0x95 -> sta(zpx());
             case 0x96 -> stx(zpy());
-            case 0x98 -> tya(imp());
+            case 0x98 -> tya();
             case 0x99 -> sta(aby(opcode));
-            case 0x9A -> txs(imp());
+            case 0x9A -> txs();
             case 0x9D -> sta(abx(opcode));
             case 0xA0 -> ldy(imm());
             case 0xA1 -> lda(izx());
@@ -404,9 +372,9 @@ public final class Cpu {
             case 0xA4 -> ldy(zp0());
             case 0xA5 -> lda(zp0());
             case 0xA6 -> ldx(zp0());
-            case 0xA8 -> tay(imp());
+            case 0xA8 -> tay();
             case 0xA9 -> lda(imm());
-            case 0xAA -> tax(imp());
+            case 0xAA -> tax();
             case 0xAC -> ldy(abs());
             case 0xAD -> lda(abs());
             case 0xAE -> ldx(abs());
@@ -415,9 +383,9 @@ public final class Cpu {
             case 0xB4 -> ldy(zpx());
             case 0xB5 -> lda(zpx());
             case 0xB6 -> ldx(zpy());
-            case 0xB8 -> clv(imp());
+            case 0xB8 -> clv();
             case 0xB9 -> lda(aby(opcode));
-            case 0xBA -> tsx(imp());
+            case 0xBA -> tsx();
             case 0xBC -> ldy(abx(opcode));
             case 0xBD -> lda(abx(opcode));
             case 0xBE -> ldx(aby(opcode));
@@ -426,9 +394,9 @@ public final class Cpu {
             case 0xC4 -> cpy(zp0());
             case 0xC5 -> cmp(zp0());
             case 0xC6 -> dec(zp0());
-            case 0xC8 -> iny(imp());
+            case 0xC8 -> iny();
             case 0xC9 -> cmp(imm());
-            case 0xCA -> dex(imp());
+            case 0xCA -> dex();
             case 0xCC -> cpy(abs());
             case 0xCD -> cmp(abs());
             case 0xCE -> dec(abs());
@@ -436,7 +404,7 @@ public final class Cpu {
             case 0xD1 -> cmp(izy(opcode));
             case 0xD5 -> cmp(zpx());
             case 0xD6 -> dec(zpx());
-            case 0xD8 -> cld(imp());
+            case 0xD8 -> cld();
             case 0xD9 -> cmp(aby(opcode));
             case 0xDD -> cmp(abx(opcode));
             case 0xDE -> dec(abx(opcode));
@@ -445,7 +413,7 @@ public final class Cpu {
             case 0xE4 -> cpx(zp0());
             case 0xE5 -> sbc(zp0());
             case 0xE6 -> inc(zp0());
-            case 0xE8 -> inx(imp());
+            case 0xE8 -> inx();
             case 0xE9 -> sbc(imm());
             case 0xEA -> nop(imp());
             case 0xEC -> cpx(abs());
@@ -455,7 +423,7 @@ public final class Cpu {
             case 0xF1 -> sbc(izy(opcode));
             case 0xF5 -> sbc(zpx());
             case 0xF6 -> inc(zpx());
-            case 0xF8 -> sed(imp());
+            case 0xF8 -> sed();
             case 0xF9 -> sbc(aby(opcode));
             case 0xFD -> sbc(abx(opcode));
             case 0xFE -> inc(abx(opcode));
@@ -671,12 +639,12 @@ public final class Cpu {
         branch(!getN(), address);
     }
 
-    private void brk(int address) {
+    private void brk() {
         incPC();
         push(pc >> 8);
         push(pc & 0xff);
         setB(true);
-        push(status);
+        push(st);
         setB(false);
         setPc(read(0xfffe) << 8 | read(0xffff));
     }
@@ -689,19 +657,19 @@ public final class Cpu {
         branch(getV(), address);
     }
 
-    private void clc(int address) {
+    private void clc() {
         setC(false);
     }
 
-    private void cld(int address) {
+    private void cld() {
         setD(false);
     }
 
-    private void cli(int address) {
+    private void cli() {
         setI(false);
     }
 
-    private void clv(int address) {
+    private void clv() {
         setV(false);
     }
 
@@ -733,12 +701,12 @@ public final class Cpu {
         write(address, t);
     }
 
-    private void dex(int address) {
+    private void dex() {
         x = (x - 1) & 0xff;
         setZN(x);
     }
 
-    private void dey(int address) {
+    private void dey() {
         y = (y - 1) & 0xff;
         setZN(y);
     }
@@ -755,12 +723,12 @@ public final class Cpu {
         write(address, t);
     }
 
-    private void inx(int address) {
+    private void inx() {
         x = (x + 1) & 0xff;
         setZN(x);
     }
 
-    private void iny(int address) {
+    private void iny() {
         y = (y + 1) & 0xff;
         setZN(y);
     }
@@ -810,21 +778,21 @@ public final class Cpu {
         setZN(a);
     }
 
-    private void pha(int address) {
+    private void pha() {
         push(a);
     }
 
-    private void php(int address) {
-        push(status | 0x30);
+    private void php() {
+        push(st | 0x30);
     }
 
-    private void pla(int address) {
+    private void pla() {
         a = pop();
         setZN(a);
     }
 
-    private void plp(int address) {
-        status = pop();
+    private void plp() {
+        st = pop();
         setB(false);
         setU(true);
     }
@@ -845,14 +813,14 @@ public final class Cpu {
         write(address, t);
     }
 
-    private void rti(int address) {
-        status = pop() & 0xcf;
+    private void rti() {
+        st = pop() & 0xcf;
         int lo = pop();
         int hi = pop();
         setPc((hi << 8) | lo);
     }
 
-    private void rts(int address) {
+    private void rts() {
         int lo = pop();
         int hi = pop();
         setPc((hi << 8) | lo);
@@ -870,15 +838,15 @@ public final class Cpu {
         setZN(a);
     }
 
-    private void sec(int address) {
+    private void sec() {
         setC(true);
     }
 
-    private void sed(int address) {
+    private void sed() {
         setD(true);
     }
 
-    private void sei(int address) {
+    private void sei() {
         setI(true);
     }
 
@@ -894,31 +862,31 @@ public final class Cpu {
         write(address, y);
     }
 
-    private void tax(int address) {
+    private void tax() {
         x = a;
         setZN(x);
     }
 
-    private void tay(int address) {
+    private void tay() {
         y = a;
         setZN(y);
     }
 
-    private void tsx(int address) {
+    private void tsx() {
         x = sp;
         setZN(x);
     }
 
-    private void txa(int address) {
+    private void txa() {
         a = x;
         setZN(a);
     }
 
-    private void txs(int address) {
+    private void txs() {
         sp = x;
     }
 
-    private void tya(int address) {
+    private void tya() {
         a = y;
         setZN(a);
     }
