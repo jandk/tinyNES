@@ -4,7 +4,7 @@ import java.util.*;
 
 public final class Cpu {
 
-    private static final int[] CyclesPerInstruction = {
+    private static final byte[] CyclesPerInstruction = {
         7, 6, 0, 8, 3, 3, 5, 5, 3, 2, 2, 2, 4, 4, 6, 6,
         2, 5, 0, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
         6, 6, 0, 8, 3, 3, 5, 5, 4, 2, 2, 2, 4, 4, 6, 6,
@@ -282,7 +282,7 @@ public final class Cpu {
             case 0x06 -> asl(zp0());
             case 0x08 -> php();
             case 0x09 -> ora(imm());
-            case 0x0A -> asl(imp());
+            case 0x0A -> asla();
             case 0x0D -> ora(abs());
             case 0x0E -> asl(abs());
             case 0x10 -> bpl(rel());
@@ -300,7 +300,7 @@ public final class Cpu {
             case 0x26 -> rol(zp0());
             case 0x28 -> plp();
             case 0x29 -> and(imm());
-            case 0x2A -> rol(imp());
+            case 0x2A -> rola();
             case 0x2C -> bit(abs());
             case 0x2D -> and(abs());
             case 0x2E -> rol(abs());
@@ -318,7 +318,7 @@ public final class Cpu {
             case 0x46 -> lsr(zp0());
             case 0x48 -> pha();
             case 0x49 -> eor(imm());
-            case 0x4A -> lsr(imp());
+            case 0x4A -> lsra();
             case 0x4C -> jmp(abs());
             case 0x4D -> eor(abs());
             case 0x4E -> lsr(abs());
@@ -336,7 +336,7 @@ public final class Cpu {
             case 0x66 -> ror(zp0());
             case 0x68 -> pla();
             case 0x69 -> adc(imm());
-            case 0x6A -> ror(imp());
+            case 0x6A -> rora();
             case 0x6C -> jmp(ind());
             case 0x6D -> adc(abs());
             case 0x6E -> ror(abs());
@@ -415,7 +415,7 @@ public final class Cpu {
             case 0xE6 -> inc(zp0());
             case 0xE8 -> inx();
             case 0xE9 -> sbc(imm());
-            case 0xEA -> nop(imp());
+            case 0xEA -> nop();
             case 0xEC -> cpx(abs());
             case 0xED -> sbc(abs());
             case 0xEE -> inc(abs());
@@ -430,16 +430,16 @@ public final class Cpu {
 
             // Illegal Opcodes
             case 0x03 -> slo(izx());
-            case 0x04 -> nop(zp0());
+            case 0x04, 0x44, 0x64 -> zp0();
             case 0x07 -> slo(zp0());
-            case 0x0C -> nop(abs());
+            case 0x0C -> abs();
             case 0x0F -> slo(abs());
             case 0x13 -> slo(izy(opcode));
-            case 0x14, 0x34, 0x54, 0x74, 0xD4, 0xF4 -> nop(zpx());
+            case 0x14, 0x34, 0x54, 0x74, 0xD4, 0xF4 -> zpx();
             case 0x17 -> slo(zpx());
-            case 0x1A, 0x3A, 0x5A, 0x7A, 0xDA, 0xFA -> nop(imp());
+            case 0x1A, 0x3A, 0x5A, 0x7A, 0xDA, 0xFA -> nop();
             case 0x1B -> slo(aby(opcode));
-            case 0x1C, 0x3C, 0x5C, 0x7C, 0xDC, 0xFC -> nop(abx(opcode));
+            case 0x1C, 0x3C, 0x5C, 0x7C, 0xDC, 0xFC -> abx(opcode);
             case 0x1F -> slo(abx(opcode));
             case 0x23 -> rla(izx());
             case 0x27 -> rla(zp0());
@@ -449,7 +449,6 @@ public final class Cpu {
             case 0x3B -> rla(aby(opcode));
             case 0x3F -> rla(abx(opcode));
             case 0x43 -> sre(izx());
-            case 0x44, 0x64 -> nop(zp0());
             case 0x47 -> sre(zp0());
             case 0x4F -> sre(abs());
             case 0x53 -> sre(izy(opcode));
@@ -463,7 +462,7 @@ public final class Cpu {
             case 0x77 -> rra(zpx());
             case 0x7B -> rra(aby(opcode));
             case 0x7F -> rra(abx(opcode));
-            case 0x80, 0x82, 0x89 -> nop(imm());
+            case 0x80, 0x82, 0x89 -> imm();
             case 0x83 -> sax(izx());
             case 0x87 -> sax(zp0());
             case 0x8F -> sax(abs());
@@ -498,10 +497,6 @@ public final class Cpu {
     // endregion
 
     // region Addressing Modes
-
-    private int imp() {
-        return -1;
-    }
 
     private int imm() {
         return pc++;
@@ -606,6 +601,13 @@ public final class Cpu {
         int t = (f << 1) & 0xff;
         setZN(t);
         write(address, t);
+    }
+
+    private void asla() {
+        setC((a & 0x80) != 0);
+        int t = (a << 1) & 0xff;
+        setZN(t);
+        a = t;
     }
 
     private void bcc(int address) {
@@ -770,7 +772,14 @@ public final class Cpu {
         write(address, t);
     }
 
-    private void nop(int address) {
+    private void lsra() {
+        setC((a & 0x01) != 0);
+        int t = a >>> 1;
+        setZN(t);
+        a = t;
+    }
+
+    private void nop() {
     }
 
     private void ora(int address) {
@@ -805,12 +814,26 @@ public final class Cpu {
         write(address, t & 0xff);
     }
 
+    private void rola() {
+        int t = (a << 1) | (getC() ? 0x01 : 0x00);
+        setC((a & 0x80) != 0);
+        setZN(t);
+        a = t & 0xff;
+    }
+
     private void ror(int address) {
         int f = read(address);
         int t = (f >>> 1) | (getC() ? 0x80 : 0x00);
         setC((f & 0x01) != 0);
         setZN(t);
         write(address, t);
+    }
+
+    private void rora() {
+        int t = (a >>> 1) | (getC() ? 0x80 : 0x00);
+        setC((a & 0x01) != 0);
+        setZN(t);
+        a = t;
     }
 
     private void rti() {
