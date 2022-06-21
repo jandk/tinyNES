@@ -4,6 +4,7 @@ import java.util.*;
 
 public final class Nes {
 
+    private final Controller controller = new Controller();
     private final Cartridge cartridge;
     private final Cpu cpu;
     private final Ppu ppu;
@@ -22,6 +23,10 @@ public final class Nes {
 
     public Ppu getPpu() {
         return ppu;
+    }
+
+    public Controller getController() {
+        return controller;
     }
 
     public void clock() {
@@ -61,8 +66,11 @@ public final class Nes {
             return ppu.cpuRead(address);
         }
         if (address >= 0x4000 && address <= 0x401F) {
-            if (address <= 0x4013 || address == 0x4015 || address == 0x4017) {
-                // System.err.println("Read from APU: " + Util.hex4(address));
+            if (address == 0x4016) {
+                return (byte) controller.strobe();
+            }
+            if (address <= 0x4013 || address == 0x4015) {
+                System.err.println("Read from APU: " + Util.hex4(address));
                 return 0;
             }
             // System.err.println("Read from IO: " + Util.hex4(address));
@@ -84,7 +92,10 @@ public final class Nes {
             return;
         }
         if (address >= 0x4000 && address <= 0x401F) {
-            if (address <= 0x4013 || address == 0x4015 || address == 0x4017) {
+            if (address == 0x4016) {
+                controller.latch();
+            }
+            if (address <= 0x4013 || address == 0x4015) {
                 // System.err.println("Write to APU: " + Util.hex4(address) + " -- " + Util.hex2(value));
                 return;
             }

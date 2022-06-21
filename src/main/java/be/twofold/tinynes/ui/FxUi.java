@@ -16,6 +16,7 @@ import javafx.stage.*;
 import java.io.*;
 import java.nio.*;
 import java.nio.file.*;
+import java.util.*;
 
 public class FxUi extends Application {
 
@@ -23,6 +24,16 @@ public class FxUi extends Application {
     private static final int Width = 256;
     private static final int Height = 240;
     private static final int Scale = 2;
+    private static final Map<KeyCode, ButtonKey> KeyCodes = Map.of(
+        KeyCode.X, ButtonKey.A,
+        KeyCode.Z, ButtonKey.B,
+        KeyCode.SHIFT, ButtonKey.SELECT,
+        KeyCode.ENTER, ButtonKey.START,
+        KeyCode.UP, ButtonKey.UP,
+        KeyCode.DOWN, ButtonKey.DOWN,
+        KeyCode.LEFT, ButtonKey.LEFT,
+        KeyCode.RIGHT, ButtonKey.RIGHT
+    );
 
     private final AnimationTimer timer = new FixedTimer(this::update);
     private final byte[] frameBuffer = new byte[Width * Height];
@@ -40,15 +51,25 @@ public class FxUi extends Application {
         BorderPane root = new BorderPane();
         root.setCenter(buildDisplay());
         root.setTop(buildMenu());
+        Scene scene = new Scene(root);
+        scene.setOnKeyPressed(this::handleKeyPressed);
+        scene.setOnKeyReleased(this::handleKeyReleased);
 
         primaryStage.setTitle(Title);
-        Scene scene = new Scene(root);
         primaryStage.setScene(scene);
         primaryStage.sizeToScene();
         primaryStage.show();
 
         loadRom(Path.of("src/test/resources/nestest.nes"));
         timer.start();
+    }
+
+    private void handleKeyPressed(KeyEvent event) {
+        nes.getController().press(KeyCodes.get(event.getCode()));
+    }
+
+    private void handleKeyReleased(KeyEvent event) {
+        nes.getController().release(KeyCodes.get(event.getCode()));
     }
 
     private Node buildDisplay() {
