@@ -10,12 +10,12 @@ import javafx.scene.image.*;
 import javafx.scene.input.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.*;
+import javafx.scene.text.*;
 import javafx.stage.*;
 
 import java.io.*;
 import java.nio.*;
 import java.nio.file.*;
-import java.util.*;
 
 public class FxUi extends Application {
 
@@ -90,6 +90,8 @@ public class FxUi extends Application {
             GraphicsContext gc = canvas.getGraphicsContext2D();
             gc.drawImage(image, 0, 0, Width * Scale, Height * Scale);
             gc.setFill(Color.WHITE);
+            gc.setFont(Font.font("Monospaced", 16));
+            gc.setFontSmoothingType(FontSmoothingType.LCD);
             gc.fillText("FPS: " + nes.getCpu().toString(), 10, 10);
         }
     }

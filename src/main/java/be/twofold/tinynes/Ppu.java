@@ -138,12 +138,12 @@ public final class Ppu {
         }
     }
 
-    private byte ppuRead(int address) {
+    private int ppuRead(int address) {
         if (address >= 0x0000 && address <= 0x1FFF) {
-            return cartridge.ppuRead(address);
+            return Byte.toUnsignedInt(cartridge.ppuRead(address));
         }
         if (address >= 0x2000 && address <= 0x3FFF) {
-            return nameTable[address & 0x0FFF];
+            return Byte.toUnsignedInt(nameTable[address & 0x0FFF]);
         }
         throw new IllegalArgumentException("Illegal PPU read: " + Util.hex4(address));
     }
@@ -154,12 +154,14 @@ public final class Ppu {
             return;
         }
         if (address >= 0x2000 && address <= 0x3EFF) {
-            address &= 0x0FFF;
-            nameTable[address] = data;
+            if (!verticalBlank()) {
+                System.out.println("Writing to nameTable mid frame: " + Util.hex4(address) + " - " + Util.hex2(data));
+            }
+            nameTable[address & 0x0FFF] = data;
             return;
         }
         if (address >= 0X3F00 && address <= 0X3FFF) {
-            address = address & 0x1F;
+            address &= 0x1F;
             address = switch (address) {
                 case 0x0010 -> 0x0000;
                 case 0x0014 -> 0x0004;
@@ -271,24 +273,30 @@ public final class Ppu {
     }
 
     private void renderTile(byte[] pixels, int y, int x) {
-        int tile = ppuRead(getNameTable() + (y * 32 + x));
+        int tile = ppuRead(getNameTable() + y * 32 + x);
         int tileX = (tile % 16);
         int tileY = (tile / 16);
-        for (int row = 0; row < 8; row++) {
-            int offset = (tileY * 256) + (tileX * 16);
-            byte tileLsb = ppuRead(getPatternTable() + (offset + row + 0));
-            byte tileMsb = ppuRead(getPatternTable() + (offset + row + 8));
-            for (int col = 0; col < 8; col++) {
-                int shift = 7 - col;
-                int msb = (tileMsb & (1 << shift)) >> shift;
-                int lsb = (tileLsb & (1 << shift)) >> shift;
-                int color = (msb << 1) + lsb;
-
-                int xx = x * 8 + col;
-                int yy = y * 8 + row;
-                pixels[yy * 256 + xx] = palette[color];
+        int offset = (tileY * 256) + (tileX * 16);
+        int paletteAddress = getNameTable() | 0x03C0 | ((y >> 2) << 3) | (x >> 2);
+        int pi = ppuRead(paletteAddress);
+        pi >>= (y & 0x02) << 1;
+        pi >>= (x & 0x02);
+        pi &= 0x03;
+        for (int r = 0, ro = y * (8 * 256); r < 8; r++, ro += 256) {
+            int tileLsb = ppuRead(getPatternTable() + (offset + r + 0));
+            int tileMsb = ppuRead(getPatternTable() + (offset + r + 8));
+            int tileInt = interleave(tileLsb, tileMsb);
+            for (int c = 0, co = x * 8; c < 8; c++, co++) {
+                int colorIndex = (tileInt >> 14 - (c * 2)) & 0x03;
+                pixels[ro + co] = palette[pi * 4 + colorIndex];
             }
         }
+    }
+
+    private int interleave(int lsb, int msb) {
+        long lsbI = ((lsb * 0x0101010101010101L & 0x8040201008040201L) * 0x0102040810204081L >> 49) & 0x5555;
+        long msbI = ((msb * 0x0101010101010101L & 0x8040201008040201L) * 0x0102040810204081L >> 48) & 0xAAAA;
+        return (int) (lsbI | msbI);
     }
 
 }
