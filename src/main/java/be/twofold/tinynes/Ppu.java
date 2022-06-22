@@ -5,7 +5,6 @@ public final class Ppu {
     private final Cartridge cartridge;
 
     // Palette
-    private final byte[] frameBuffer = new byte[256 * 240];
     private final byte[] nameTable = new byte[0x1000];
     private final byte[] palette = new byte[0x20];
     private final byte[] oam = new byte[0x100];
@@ -21,9 +20,6 @@ public final class Ppu {
     private int ppuMask;
     private int ppuStatus;
     private int oamAddr;
-    private int oamData;
-    private int ppuScroll;
-    private int ppuData;
 
     // Running counters
     boolean nmi;
@@ -243,6 +239,7 @@ public final class Ppu {
 
     private void writeOamData(byte value) {
         oam[oamAddr] = value;
+        oamAddr = (oamAddr + addressIncrement()) & 0xFF;
     }
 
     private void writePpuScroll(byte value) {
@@ -281,7 +278,16 @@ public final class Ppu {
         System.out.println(name + " :" + sb);
     }
 
-    public void drawBackgroundArray(byte[] pixels) {
+    public void draw(byte[] screen) {
+        if (renderBackground()) {
+            drawBackground(screen);
+        }
+        if (renderSprites()) {
+            drawSprites(screen);
+        }
+    }
+
+    public void drawBackground(byte[] pixels) {
         for (int y = 0; y < 30; y++) {
             for (int x = 0; x < 32; x++) {
                 renderTile(pixels, y, x);
@@ -310,10 +316,47 @@ public final class Ppu {
         }
     }
 
+    public void drawSprites(byte[] pixels) {
+        for (int i = 0; i < 256; i += 4) {
+            int y = Byte.toUnsignedInt(oam[i]) + 1;
+            int index = Byte.toUnsignedInt(oam[i + 1]);
+            int attr = Byte.toUnsignedInt(oam[i + 2]);
+            int x = Byte.toUnsignedInt(oam[i + 3]);
+
+            renderSprite(pixels, x, y, index, attr);
+        }
+    }
+
+    private void renderSprite(byte[] pixels, int x, int y, int index, int attr) {
+        if (x + 8 > 256 || y + 8 > 240) {
+            return;
+        }
+
+        int offset = spriteTable() + (index * 16);
+        int pi = (attr & 0x03) + 4;
+
+        boolean flipX = (attr & 0x40) != 0;
+        boolean flipY = (attr & 0x80) != 0;
+
+        for (int r = 0; r < 8; r++) {
+            int rr = flipY ? 7 - r : r;
+            int ro = (y + rr) * 256;
+            int tileLsb = ppuRead(offset + rr + 0);
+            int tileMsb = ppuRead(offset + rr + 8);
+            int tileInt = interleave(tileLsb, tileMsb);
+            for (int c = 0; c < 8; c++) {
+                int cc = flipX ? 7 - c : c;
+                int colorIndex = (tileInt >> 14 - (cc * 2)) & 0x03;
+                if (colorIndex != 0) {
+                    pixels[ro + x + c] = palette[pi * 4 + colorIndex];
+                }
+            }
+        }
+    }
+
     private int interleave(int lsb, int msb) {
         long lsbI = ((lsb * 0x0101010101010101L & 0x8040201008040201L) * 0x0102040810204081L >> 49) & 0x5555;
         long msbI = ((msb * 0x0101010101010101L & 0x8040201008040201L) * 0x0102040810204081L >> 48) & 0xAAAA;
         return (int) (lsbI | msbI);
     }
-
 }

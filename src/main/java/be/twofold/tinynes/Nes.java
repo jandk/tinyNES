@@ -4,10 +4,12 @@ import java.util.*;
 
 public final class Nes {
 
-    private final Controller controller = new Controller();
+    private final Controller controller1 = new Controller();
+    private final Controller controller2 = new Controller();
     private final Cartridge cartridge;
     private final Cpu cpu;
     private final Ppu ppu;
+    private final Apu apu;
     private final byte[] ram = new byte[2 * 1024];
     public int clockCounter = 0;
 
@@ -15,6 +17,7 @@ public final class Nes {
         this.cartridge = Objects.requireNonNull(cartridge);
         this.cpu = new Cpu(this);
         this.ppu = new Ppu(cartridge);
+        this.apu = new Apu();
     }
 
     public Cpu getCpu() {
@@ -25,8 +28,8 @@ public final class Nes {
         return ppu;
     }
 
-    public Controller getController() {
-        return controller;
+    public Controller getController1() {
+        return controller1;
     }
 
     public void clock() {
@@ -65,18 +68,20 @@ public final class Nes {
             // System.err.println("Read from PPU: " + Util.hex4(address));
             return ppu.cpuRead(address);
         }
-        if (address >= 0x4000 && address <= 0x401F) {
-            if (address == 0x4016) {
-                return (byte) controller.strobe();
-            }
+        if (address >= 0x4000 && address <= 0x4018) {
             if (address <= 0x4013 || address == 0x4015) {
-                System.err.println("Read from APU: " + Util.hex4(address));
-                return 0;
+                return apu.read(address);
             }
-            // System.err.println("Read from IO: " + Util.hex4(address));
+            if (address == 0x4016) {
+                return (byte) controller1.strobe();
+            }
+            if (address == 0x4017) {
+                return (byte) controller2.strobe();
+            }
+            System.err.println("Read from IO: " + Util.hex4(address));
             return 0;
         }
-        if (address >= 0x4020 && address <= 0xFFFF) {
+        if (address >= 0x4019 && address <= 0xFFFF) {
             return cartridge.cpuRead(address);
         }
         throw new IllegalArgumentException("Invalid address: 0x" + Integer.toHexString(address));
@@ -91,21 +96,39 @@ public final class Nes {
             ppu.cpuWrite(address, value);
             return;
         }
-        if (address >= 0x4000 && address <= 0x401F) {
-            if (address == 0x4016) {
-                controller.latch();
-            }
-            if (address <= 0x4013 || address == 0x4015) {
-                // System.err.println("Write to APU: " + Util.hex4(address) + " -- " + Util.hex2(value));
+        if (address >= 0x4000 && address <= 0x4018) {
+            if (address <= 0x4013 || address == 0x4015 || address == 0x4017) {
+                apu.write(address, value);
                 return;
             }
-            // System.err.println("Write to IO: " + Util.hex4(address) + " -- " + Util.hex2(value));
+            if (address == 0x4014) {
+                oamDma(value);
+                return;
+            }
+            if (address == 0x4016) {
+                controller1.latch();
+                return;
+            }
+            System.err.println("Write to IO: " + Util.hex4(address) + " -- " + Util.hex2(value));
             return;
         }
-        if (address >= 0x4020 && address <= 0xFFFF) {
+        if (address >= 0x4019 && address <= 0xFFFF) {
             cartridge.cpuWrite(address, value);
             return;
         }
         throw new IllegalArgumentException("Invalid address: 0x" + Integer.toHexString(address));
+    }
+
+    private void oamDma(byte value) {
+        System.out.println("OAM DMA: " + Util.hex2(value));
+        int bank = Byte.toUnsignedInt(value) << 8;
+        cpu.enabled = false;
+        for (int i = 0; i < 256; i++) {
+            ppu.cpuWrite(0x2004, read(bank | i));
+            for (int c = 0; c < 6; c++) {
+                clock();
+            }
+        }
+        cpu.enabled = true;
     }
 }

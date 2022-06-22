@@ -32,6 +32,7 @@ public final class Cpu {
     private int pc; // Program counter
     private int st; // Status register
     int cycles; // Cycles since last instruction
+    boolean enabled = true;
 
     private final Tracer tracer = new Tracer();
 
@@ -43,6 +44,10 @@ public final class Cpu {
     }
 
     public void clock() {
+        if (!enabled) {
+            totalCycles++;
+            return;
+        }
         if (cycles == 0) {
             int opcode = nextByte();
             cycles = CyclesPerInstruction[opcode];
@@ -50,13 +55,6 @@ public final class Cpu {
         }
         cycles--;
         totalCycles++;
-    }
-
-    public void step() {
-        int opcode = nextByte();
-        cycles = CyclesPerInstruction[opcode];
-        execute(opcode);
-        totalCycles += cycles;
     }
 
     public void reset() {
@@ -235,8 +233,10 @@ public final class Cpu {
 
     // region Helpers
 
-    private void incPC() {
+    private int incPC() {
+        int result = pc;
         pc = (pc + 1) & 0xFFFF;
+        return result;
     }
 
     int read(int address) {
@@ -256,16 +256,12 @@ public final class Cpu {
     }
 
     private int nextByte() {
-        int result = read(pc);
-        incPC();
-        return result;
+        return read(incPC());
     }
 
     private int nextWord() {
-        int lo = read(pc);
-        incPC();
-        int hi = read(pc);
-        incPC();
+        int lo = read(incPC());
+        int hi = read(incPC());
         return hi << 8 | lo;
     }
 
@@ -563,10 +559,7 @@ public final class Cpu {
         return address;
     }
 
-    Set<Integer> pageCrossings = new TreeSet<>();
-
     private void pageCrossing(int address, int base, int opcode) {
-        pageCrossings.add(opcode);
         if ((address & 0xff00) != (base & 0xff00)) {
             int extra = switch (opcode) {
                 case 0x1E, 0x3E, 0x5E, 0x7E, 0x91, 0x99, 0x9D, 0xDE, 0xFE -> 0;
