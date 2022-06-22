@@ -32,4 +32,9 @@ final class Mapper000 extends Mapper {
         throw illegalWrite(address, value);
     }
 
+    @Override
+    void reset() {
+        // Do nothing
+    }
+
 }

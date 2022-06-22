@@ -18,6 +18,8 @@ public abstract class Mapper {
 
     abstract void ppuWrite(int address, byte value);
 
+    abstract void reset();
+
     IllegalArgumentException illegalRead(int address) {
         return new IllegalArgumentException("Invalid read from address " + Util.hex4(address));
     }
