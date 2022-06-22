@@ -38,6 +38,34 @@ public final class Ppu {
 
     // PPUCTRL
 
+    public int nameTable() {
+        return 0x2000 + ((ppuCtrl & 0x03) << 10);
+    }
+
+    public int addressIncrement() {
+        return (ppuCtrl & 0x04) != 0 ? 32 : 1;
+    }
+
+    public int spriteTable() {
+        return (ppuCtrl & 0x08) << 9;
+    }
+
+    public int backgroundTable() {
+        return (ppuCtrl & 0x10) << 8;
+    }
+
+    public int spriteSize() {
+        return (ppuCtrl & 0x20) != 0 ? 16 : 8;
+    }
+
+    public boolean ppuMasterSlave() {
+        return (ppuCtrl & 0x40) != 0;
+    }
+
+    public boolean nmi() {
+        return (ppuCtrl & 0x80) != 0;
+    }
+
 
     // PPUMASK
 
@@ -79,7 +107,7 @@ public final class Ppu {
         return (ppuStatus & 0x80) != 0;
     }
 
-    public void setVerticalBlank(boolean value) {
+    public void verticalBlank(boolean value) {
         ppuStatus = (byte) ((ppuStatus & 0x7F) | (value ? 0x80 : 0x00));
     }
 
@@ -87,7 +115,7 @@ public final class Ppu {
         return (ppuStatus & 0x40) != 0;
     }
 
-    public void setSpriteZeroHit(boolean value) {
+    public void spriteZeroHit(boolean value) {
         ppuStatus = (byte) ((ppuStatus & 0xBF) | (value ? 0x40 : 0x00));
     }
 
@@ -95,36 +123,22 @@ public final class Ppu {
         return (ppuStatus & 0x20) != 0;
     }
 
-    public void setSpriteOverflow(boolean value) {
+    public void spriteOverflow(boolean value) {
         ppuStatus = (byte) ((ppuStatus & 0xDF) | (value ? 0x20 : 0x00));
     }
 
     // endregion
 
-    // region Properties
-
-    public int getNameTable() {
-        return 0x2000 + ((ppuCtrl & 0x03) << 10);
-    }
-
-    public int getPatternTable() {
-        return (ppuCtrl & 0x10) << 8;
-    }
-
-    public boolean isNmiEnabled() {
-        return (ppuCtrl & 0x80) != 0;
-    }
-
-    // endregion
-
     public void clock() {
-        if (row == 261 && col == 1) {
-            setVerticalBlank(false); // Clear VBlank flag
-        }
-        if (row == 241 && col == 1) {
-            setVerticalBlank(true); // Set VBlank flag
-            if (isNmiEnabled()) {
-                nmi = true;
+        if (col == 1) {
+            if (row == 241) {
+                verticalBlank(true); // Set VBlank flag
+                if (nmi()) {
+                    nmi = true;
+                }
+            }
+            if (row == 261) {
+                verticalBlank(false); // Clear VBlank flag
             }
         }
 
@@ -154,9 +168,6 @@ public final class Ppu {
             return;
         }
         if (address >= 0x2000 && address <= 0x3EFF) {
-            if (!verticalBlank()) {
-                System.out.println("Writing to nameTable mid frame: " + Util.hex4(address) + " - " + Util.hex2(data));
-            }
             nameTable[address & 0x0FFF] = data;
             return;
         }
@@ -179,7 +190,7 @@ public final class Ppu {
         return (byte) switch (address & 0x07) {
             case 2 -> readPpuStatus();
             case 4 -> readOam();
-            case 7 -> throw new UnsupportedOperationException();
+            case 7 -> readPpuData();
             default -> throw new IllegalArgumentException("Invalid address: " + Util.hex4(address));
         };
     }
@@ -191,6 +202,12 @@ public final class Ppu {
 
     private byte readOam() {
         return oam[oamAddr];
+    }
+
+    private byte readPpuData() {
+        byte result = (byte) ppuRead(ppuAddr);
+        ppuAddr += addressIncrement();
+        return result;
     }
 
     public void cpuWrite(int address, byte value) {
@@ -249,7 +266,7 @@ public final class Ppu {
 
     private void writePpuData(byte value) {
         ppuWrite(ppuAddr, value);
-        ppuAddr += (ppuCtrl & 0x04) != 0 ? 32 : 1;
+        ppuAddr += addressIncrement();
     }
 
     private void dumpRegister(int value, String key, String name) {
@@ -273,18 +290,18 @@ public final class Ppu {
     }
 
     private void renderTile(byte[] pixels, int y, int x) {
-        int tile = ppuRead(getNameTable() + y * 32 + x);
+        int tile = ppuRead(nameTable() + y * 32 + x);
         int tileX = (tile % 16);
         int tileY = (tile / 16);
         int offset = (tileY * 256) + (tileX * 16);
-        int paletteAddress = getNameTable() | 0x03C0 | ((y >> 2) << 3) | (x >> 2);
+        int paletteAddress = nameTable() | 0x03C0 | ((y >> 2) << 3) | (x >> 2);
         int pi = ppuRead(paletteAddress);
         pi >>= (y & 0x02) << 1;
         pi >>= (x & 0x02);
         pi &= 0x03;
         for (int r = 0, ro = y * (8 * 256); r < 8; r++, ro += 256) {
-            int tileLsb = ppuRead(getPatternTable() + (offset + r + 0));
-            int tileMsb = ppuRead(getPatternTable() + (offset + r + 8));
+            int tileLsb = ppuRead(backgroundTable() + (offset + r + 0));
+            int tileMsb = ppuRead(backgroundTable() + (offset + r + 8));
             int tileInt = interleave(tileLsb, tileMsb);
             for (int c = 0, co = x * 8; c < 8; c++, co++) {
                 int colorIndex = (tileInt >> 14 - (c * 2)) & 0x03;
