@@ -10,7 +10,7 @@ public final class Palette {
 
     private static int[] loadPalette() {
         byte[] rawPalette;
-        try (InputStream in = Ppu.class.getResourceAsStream("/NES Classic (FBX).pal")) {
+        try (InputStream in = Ppu.class.getResourceAsStream("/YUV.pal")) {
             rawPalette = in.readAllBytes();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
