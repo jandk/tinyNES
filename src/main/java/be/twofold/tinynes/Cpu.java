@@ -23,21 +23,21 @@ public final class Cpu {
         2, 5, 0, 4, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
     };
 
-    private final Nes nes;
+    private final Bus bus;
 
-    private int a;  // Accumulator
-    private int x;  // X index register
-    private int y;  // Y index register
-    private int sp; // Stack pointer
-    private int pc; // Program counter
-    private int st; // Status register
+    int a;  // Accumulator
+    int x;  // X index register
+    int y;  // Y index register
+    int sp; // Stack pointer
+    int pc; // Program counter
+    int st; // Status register
     int cycles; // Cycles since last instruction
     boolean enabled = true;
 
     int totalCycles;
 
-    public Cpu(Nes nes) {
-        this.nes = Objects.requireNonNull(nes);
+    public Cpu(Bus bus) {
+        this.bus = Objects.requireNonNull(bus);
         reset();
     }
 
@@ -105,17 +105,9 @@ public final class Cpu {
 
     // region Getters and Setters
 
-    public int getA() {
-        return a;
-    }
-
     public void setA(int a) {
         assert 0x00 <= a && a <= 0xFF;
         this.a = a;
-    }
-
-    public int getX() {
-        return x;
     }
 
     public void setX(int x) {
@@ -123,26 +115,14 @@ public final class Cpu {
         this.x = x;
     }
 
-    public int getY() {
-        return y;
-    }
-
     public void setY(int y) {
         assert 0x00 <= y && y <= 0xFF;
         this.y = y;
     }
 
-    public int getSp() {
-        return sp;
-    }
-
     public void setSp(int sp) {
         assert 0x00 <= sp && sp <= 0xFF;
         this.sp = sp;
-    }
-
-    public int getPc() {
-        return pc;
     }
 
     public void setPc(int pc) {
@@ -241,7 +221,7 @@ public final class Cpu {
         if (address < 0) {
             return a;
         }
-        return Byte.toUnsignedInt(nes.read(address & 0xffff));
+        return Byte.toUnsignedInt(bus.read(address & 0xffff));
     }
 
     private void write(int address, int value) {
@@ -250,7 +230,7 @@ public final class Cpu {
             a = value;
             return;
         }
-        nes.write(address, (byte) value);
+        bus.write(address, (byte) value);
     }
 
     private int nextByte() {

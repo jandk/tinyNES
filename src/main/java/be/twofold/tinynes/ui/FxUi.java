@@ -65,11 +65,11 @@ public class FxUi extends Application {
     }
 
     private void handleKeyPressed(KeyEvent event) {
-        nes.getController1().press(KeyCodes.get(event.getCode()));
+        nes.cpuBus().controller1().press(KeyCodes.get(event.getCode()));
     }
 
     private void handleKeyReleased(KeyEvent event) {
-        nes.getController1().release(KeyCodes.get(event.getCode()));
+        nes.controller1().release(KeyCodes.get(event.getCode()));
     }
 
     private Node buildDisplay() {
@@ -106,14 +106,14 @@ public class FxUi extends Application {
     private void update(long now) {
         if (nes != null) {
             nes.runFrame();
-            nes.getPpu().draw(frameBuffer);
+            nes.ppu().draw(frameBuffer);
             convertFrameBuffer(frameBuffer);
             GraphicsContext gc = canvas.getGraphicsContext2D();
             gc.drawImage(image, 0, 0, Width * Scale, Height * Scale);
             gc.setFill(Color.WHITE);
             gc.setFont(Font.font("Monospaced", 16));
             gc.setFontSmoothingType(FontSmoothingType.LCD);
-            gc.fillText("FPS: " + nes.getCpu().toString(), 10, 10);
+            gc.fillText("FPS: " + nes.cpu().toString(), 10, 10);
         }
     }
 

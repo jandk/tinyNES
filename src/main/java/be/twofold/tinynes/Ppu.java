@@ -2,12 +2,9 @@ package be.twofold.tinynes;
 
 public final class Ppu {
 
-    private final Cartridge cartridge;
-
     // Palette
-    private final byte[] nameTable = new byte[0x1000];
-    private final byte[] palette = new byte[0x20];
-    final byte[] oam = new byte[0x100];
+    private final byte[] oam = new byte[0x100];
+    private final PpuBus bus;
 
     // PPU Address Logic
     private boolean latch;
@@ -26,8 +23,8 @@ public final class Ppu {
     int row = 0;
     int col = 0;
 
-    public Ppu(Cartridge cartridge) {
-        this.cartridge = cartridge;
+    public Ppu(PpuBus bus) {
+        this.bus = bus;
     }
 
     // region Flags
@@ -97,6 +94,7 @@ public final class Ppu {
         return (ppuMask & 0x80) != 0;
     }
 
+
     // PPUSTATUS
 
     public boolean verticalBlank() {
@@ -148,121 +146,60 @@ public final class Ppu {
         }
     }
 
-    private int ppuRead(int address) {
-        if (address >= 0x0000 && address <= 0x1FFF) {
-            return Byte.toUnsignedInt(cartridge.ppuRead(address));
-        }
-        if (address >= 0x2000 && address <= 0x3FFF) {
-            return Byte.toUnsignedInt(nameTable[address & 0x0FFF]);
-        }
-        throw new IllegalArgumentException("Illegal PPU read: " + Util.hex4(address));
-    }
-
-    private void ppuWrite(int address, byte data) {
-        if (address >= 0x0000 && address <= 0x1FFF) {
-            cartridge.ppuWrite(address, data);
-            return;
-        }
-        if (address >= 0x2000 && address <= 0x3EFF) {
-            nameTable[address & 0x0FFF] = data;
-            return;
-        }
-        if (address >= 0X3F00 && address <= 0X3FFF) {
-            address &= 0x1F;
-            address = switch (address) {
-                case 0x0010 -> 0x0000;
-                case 0x0014 -> 0x0004;
-                case 0x0018 -> 0x0008;
-                case 0x001C -> 0x000C;
-                default -> address;
-            };
-            palette[address] = data;
-            return;
-        }
-        throw new IllegalArgumentException("Illegal PPU write: " + Util.hex4(address));
-    }
-
     public byte cpuRead(int address) {
         return (byte) switch (address & 0x07) {
-            case 2 -> readPpuStatus();
-            case 4 -> readOam();
-            case 7 -> readPpuData();
-            default -> throw new IllegalArgumentException("Invalid address: " + Util.hex4(address));
+            case 2 -> {
+                latch = false;
+                yield ppuStatus;
+            }
+            case 4 -> oam[oamAddr];
+            case 7 -> {
+                byte result = bus.read(ppuAddr);
+                ppuAddr += addressIncrement();
+                yield result;
+            }
+            default -> throw new IllegalArgumentException("Invalid register: " + (address & 0x07));
         };
     }
 
-    private int readPpuStatus() {
-        latch = false;
-        return ppuStatus;
-    }
+    public void cpuWrite(int address, byte data) {
+        int value = Byte.toUnsignedInt(data);
 
-    private byte readOam() {
-        return oam[oamAddr];
-    }
-
-    private byte readPpuData() {
-        byte result = (byte) ppuRead(ppuAddr);
-        ppuAddr += addressIncrement();
-        return result;
-    }
-
-    public void cpuWrite(int address, byte value) {
         switch (address & 0x07) {
-            case 0 -> writePpuCtrl(value);
-            case 1 -> writePpuMask(value);
-            case 2 -> writePpuStatus(value);
-            case 3 -> writeOamAddress(value);
-            case 4 -> writeOamData(value);
-            case 5 -> writePpuScroll(value);
-            case 6 -> writePpuAddress(value);
-            case 7 -> writePpuData(value);
+            case 0 -> ppuCtrl = value;
+            case 1 -> ppuMask = value;
+            case 2 -> {
+            }
+            case 3 -> oamAddr = value;
+            case 4 -> {
+                oam[oamAddr] = data;
+                oamAddr = (oamAddr + addressIncrement()) & 0xFF;
+            }
+            case 5 -> {
+                if (!latch) {
+                    ppuScrollX = Byte.toUnsignedInt(data);
+                } else {
+                    ppuScrollY = Byte.toUnsignedInt(data);
+                }
+                latch = !latch;
+            }
+            case 6 -> {
+                if (!latch) {
+                    ppuAddrTemp = (data & 0xFF) << 8;
+                } else {
+                    ppuAddrTemp |= data & 0xFF;
+                    ppuAddr = ppuAddrTemp;
+                }
+                latch = !latch;
+            }
+            case 7 -> writePpuData(data);
             default ->
-                throw new UnsupportedOperationException("Writing to PPU " + Util.hex4(address) + ": " + Util.hex2(value));
+                throw new UnsupportedOperationException("Writing to PPU " + Util.hex4(address) + ": " + Util.hex2(data));
         }
-    }
-
-    private void writePpuCtrl(byte value) {
-        ppuCtrl = Byte.toUnsignedInt(value);
-    }
-
-    private void writePpuMask(byte value) {
-        ppuMask = Byte.toUnsignedInt(value);
-    }
-
-    private void writePpuStatus(byte value) {
-        // Do nothing
-    }
-
-    private void writeOamAddress(byte value) {
-        oamAddr = Byte.toUnsignedInt(value);
-    }
-
-    private void writeOamData(byte value) {
-        oam[oamAddr] = value;
-        oamAddr = (oamAddr + addressIncrement()) & 0xFF;
-    }
-
-    private void writePpuScroll(byte value) {
-        if (!latch) {
-            ppuScrollX = Byte.toUnsignedInt(value);
-        } else {
-            ppuScrollY = Byte.toUnsignedInt(value);
-        }
-        latch = !latch;
-    }
-
-    private void writePpuAddress(byte value) {
-        if (!latch) {
-            ppuAddrTemp = (value & 0xFF) << 8;
-        } else {
-            ppuAddrTemp |= value & 0xFF;
-            ppuAddr = ppuAddrTemp;
-        }
-        latch = !latch;
     }
 
     private void writePpuData(byte value) {
-        ppuWrite(ppuAddr, value);
+        bus.write(ppuAddr, value);
         ppuAddr += addressIncrement();
     }
 
@@ -299,22 +236,22 @@ public final class Ppu {
     }
 
     private void renderTile(byte[] pixels, int y, int x) {
-        int tile = ppuRead(nameTable() + y * 32 + x);
+        int tile = Byte.toUnsignedInt(bus.read(nameTable() + y * 32 + x));
         int tileX = (tile % 16);
         int tileY = (tile / 16);
         int offset = (tileY * 256) + (tileX * 16);
         int paletteAddress = nameTable() | 0x03C0 | ((y >> 2) << 3) | (x >> 2);
-        int pi = ppuRead(paletteAddress);
+        int pi = Byte.toUnsignedInt(bus.read(paletteAddress));
         pi >>= (y & 0x02) << 1;
         pi >>= (x & 0x02);
         pi &= 0x03;
         for (int r = 0, ro = y * (8 * 256); r < 8; r++, ro += 256) {
-            int tileLsb = ppuRead(backgroundTable() + (offset + r + 0));
-            int tileMsb = ppuRead(backgroundTable() + (offset + r + 8));
+            int tileLsb = Byte.toUnsignedInt(bus.read(backgroundTable() + (offset + r + 0)));
+            int tileMsb = Byte.toUnsignedInt(bus.read(backgroundTable() + (offset + r + 8)));
             int tileInt = interleave(tileLsb, tileMsb);
             for (int c = 0, co = x * 8; c < 8; c++, co++) {
                 int colorIndex = (tileInt >> 14 - (c * 2)) & 0x03;
-                pixels[ro + co] = palette[pi * 4 + colorIndex];
+                pixels[ro + co] = bus.palette[pi * 4 + colorIndex];
             }
         }
     }
@@ -344,14 +281,14 @@ public final class Ppu {
         for (int r = 0; r < 8; r++) {
             int rr = flipY ? 7 - r : r;
             int ro = (y + rr) * 256;
-            int tileLsb = ppuRead(offset + rr + 0);
-            int tileMsb = ppuRead(offset + rr + 8);
+            int tileLsb = Byte.toUnsignedInt(bus.read(offset + rr + 0));
+            int tileMsb = Byte.toUnsignedInt(bus.read(offset + rr + 8));
             int tileInt = interleave(tileLsb, tileMsb);
             for (int c = 0; c < 8; c++) {
                 int cc = flipX ? 7 - c : c;
                 int colorIndex = (tileInt >> 14 - (cc * 2)) & 0x03;
                 if (colorIndex != 0) {
-                    pixels[ro + x + c] = palette[pi * 4 + colorIndex];
+                    pixels[ro + x + c] = bus.palette[pi * 4 + colorIndex];
                 }
             }
         }

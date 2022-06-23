@@ -14,14 +14,14 @@ class CpuTest {
     @Test
     void testWithNesTest() {
         Nes nes = load("/nestest.nes");
-        nes.getCpu().setPc(0xC000);
-        nes.getCpu().setSt(0x24);
-        nes.getCpu().totalCycles = 7;
+        nes.cpu().setPc(0xC000);
+        nes.cpu().setSt(0x24);
+        nes.cpu().totalCycles = 7;
 
         List<State> states = readResults();
         for (int i = 0; i < states.size(); i++) {
             State state = states.get(i);
-            assertState(nes.getCpu(), state, i);
+            assertState(nes.cpu(), state, i);
             nes.step();
         }
     }
@@ -32,14 +32,15 @@ class CpuTest {
 
         while (true) {
             nes.step();
-            if (nes.read(0x6000) != 0x00 && nes.read(0x6000) != (byte) 0x80) {
+            byte cpu6000 = nes.cpuBus().read(0x6000);
+            if (cpu6000 != 0x00 && cpu6000 != (byte) 0x80) {
                 break;
             }
         }
 
         StringBuilder sb = new StringBuilder();
         for (int offset = 0x6004; ; offset++) {
-            int value = nes.read(offset);
+            int value = nes.cpuBus().read(offset);
             if (value == 0x00) {
                 break;
             }
@@ -47,7 +48,7 @@ class CpuTest {
         }
 
         System.out.println(sb);
-        System.out.println(nes.getCpu().totalCycles);
+        System.out.println(nes.cpu().totalCycles);
     }
 
     @Test
@@ -57,9 +58,9 @@ class CpuTest {
         List<Integer> pcs = new ArrayList<>();
         // for (int i = 0; i < 1000; i++) {
         while (true) {
-            pcs.add(nes.getCpu().getPc());
+            pcs.add(nes.cpu().pc);
             nes.step();
-            if (nes.getCpu().getPc() == 0xEA5A) {
+            if (nes.cpu().pc == 0xEA5A) {
                 break;
             }
         }
@@ -71,7 +72,7 @@ class CpuTest {
             .collect(Collectors.joining(", "));
 
         System.out.println(lastPCs);
-        System.out.println(nes.getCpu().totalCycles);
+        System.out.println(nes.cpu().totalCycles);
     }
 
     private Nes load(String path) {
@@ -84,11 +85,11 @@ class CpuTest {
     // region NesTest
 
     private void assertState(Cpu cpu, State state, int i) {
-        assertValue(cpu.getA(), state.a(), i, "A");
-        assertValue(cpu.getX(), state.x(), i, "X");
-        assertValue(cpu.getY(), state.y(), i, "Y");
-        assertValue(cpu.getSp(), state.sp(), i, "SP");
-        assertValue(cpu.getPc(), state.pc(), i, "PC");
+        assertValue(cpu.a, state.a(), i, "A");
+        assertValue(cpu.x, state.x(), i, "X");
+        assertValue(cpu.y, state.y(), i, "Y");
+        assertValue(cpu.sp, state.sp(), i, "SP");
+        assertValue(cpu.pc, state.pc(), i, "PC");
         // assertValue(cpu.totalCycles, state.cycles(), i, "cycles");
 
         int actual = cpu.getSt() & 0xdf; // Ignore bit 5
