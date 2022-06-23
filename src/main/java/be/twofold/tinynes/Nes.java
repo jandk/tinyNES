@@ -131,4 +131,15 @@ public final class Nes {
         }
         cpu.enabled = true;
     }
+
+    public void reset() {
+        cpu.reset();
+        ppu.reset();
+        apu.reset();
+        clockCounter = 0;
+        dmaPage = 0;
+        dmaAddress = 0;
+        dmaTransfer = false;
+    }
+
 }

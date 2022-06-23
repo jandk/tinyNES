@@ -7,7 +7,7 @@ public final class Ppu {
     // Palette
     private final byte[] nameTable = new byte[0x1000];
     private final byte[] palette = new byte[0x20];
-    private final byte[] oam = new byte[0x100];
+    final byte[] oam = new byte[0x100];
 
     // PPU Address Logic
     private boolean latch;
@@ -287,7 +287,10 @@ public final class Ppu {
         }
     }
 
-    public void drawBackground(byte[] pixels) {
+    public void reset() {
+    }
+
+    private void drawBackground(byte[] pixels) {
         for (int y = 0; y < 30; y++) {
             for (int x = 0; x < 32; x++) {
                 renderTile(pixels, y, x);
@@ -316,7 +319,7 @@ public final class Ppu {
         }
     }
 
-    public void drawSprites(byte[] pixels) {
+    private void drawSprites(byte[] pixels) {
         for (int i = 0; i < 256; i += 4) {
             int y = Byte.toUnsignedInt(oam[i]) + 1;
             int index = Byte.toUnsignedInt(oam[i + 1]);

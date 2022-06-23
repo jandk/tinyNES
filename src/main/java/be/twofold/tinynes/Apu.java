@@ -11,4 +11,8 @@ public final class Apu {
         // System.out.println("Apu.write(" + Util.hex4(address) + ", " + Util.hex2(data) + ")");
     }
 
+    public void reset() {
+
+    }
+
 }

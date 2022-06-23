@@ -34,8 +34,6 @@ public final class Cpu {
     int cycles; // Cycles since last instruction
     boolean enabled = true;
 
-    private final Tracer tracer = new Tracer();
-
     int totalCycles;
 
     public Cpu(Nes nes) {
@@ -739,7 +737,6 @@ public final class Cpu {
         push(pc & 0x00FF);
 
         setPc(address);
-        tracer.jsr(address);
     }
 
     private void lda(int address) {
@@ -841,7 +838,6 @@ public final class Cpu {
         int hi = pop();
         setPc((hi << 8) | lo);
         incPC();
-        tracer.rts(pc);
     }
 
     private void sbc(int address) {
