@@ -260,11 +260,12 @@ public final class Ppu {
     }
 
     private void drawSprites(byte[] pixels) {
-        for (int i = 0; i < 256; i += 4) {
-            int y = Byte.toUnsignedInt(oam[i]) + 1;
-            int index = Byte.toUnsignedInt(oam[i + 1]);
-            int attr = Byte.toUnsignedInt(oam[i + 2]);
-            int x = Byte.toUnsignedInt(oam[i + 3]);
+        for (int i = 63; i >= 0; i--) {
+            int i4 = i * 4;
+            int y = Byte.toUnsignedInt(oam[i4]) + 1;
+            int index = Byte.toUnsignedInt(oam[i4 + 1]);
+            int attr = Byte.toUnsignedInt(oam[i4 + 2]);
+            int x = Byte.toUnsignedInt(oam[i4 + 3]);
 
             renderSprite(pixels, x, y, index, attr);
         }
