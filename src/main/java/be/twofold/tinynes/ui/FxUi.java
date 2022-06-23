@@ -113,7 +113,7 @@ public class FxUi extends Application {
             gc.setFill(Color.WHITE);
             gc.setFont(Font.font("Monospaced", 16));
             gc.setFontSmoothingType(FontSmoothingType.LCD);
-            gc.fillText("FPS: " + nes.cpu().toString(), 10, 10);
+            gc.fillText(nes.cpu().toString(), 10, 10);
         }
     }
 

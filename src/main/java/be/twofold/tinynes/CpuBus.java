@@ -8,11 +8,13 @@ public final class CpuBus implements Bus {
     private final Apu apu;
     private final Controller controller1 = new Controller();
     private final Controller controller2 = new Controller();
+    final Dma dma;
 
     public CpuBus(Cartridge cartridge, Ppu ppu, Apu apu) {
         this.cartridge = cartridge;
         this.ppu = ppu;
         this.apu = apu;
+        this.dma = new Dma(this);
     }
 
     public Controller controller1() {
@@ -76,6 +78,7 @@ public final class CpuBus implements Bus {
                 return;
             }
             if (address == 0x4014) {
+                dma.start(value);
                 return;
             }
             if (address == 0x4016) {

@@ -7,7 +7,8 @@ public final class Nes {
     private final Apu apu = new Apu();
     private final CpuBus cpuBus;
     private final PpuBus ppuBus;
-    int clockCounter = 0;
+    private final Dma dma;
+    int cycle = 0;
 
     public Nes(Cartridge cartridge) {
         // Create the PPU
@@ -17,6 +18,9 @@ public final class Nes {
         // Create the CPU
         cpuBus = new CpuBus(cartridge, ppu, apu);
         cpu = new Cpu(cpuBus);
+
+        // TODO: Fix this
+        dma = cpuBus.dma;
     }
 
     public Cpu cpu() {
@@ -49,14 +53,16 @@ public final class Nes {
 
     public void clock() {
         ppu.clock();
-        if ((clockCounter % 3) == 0) {
-            cpu.clock();
+        if ((cycle % 3) == 0) {
+            if (!dma.clock(cycle)) {
+                cpu.clock();
+            }
         }
         if (ppu.nmi) {
             ppu.nmi = false;
             cpu.nmi();
         }
-        clockCounter++;
+        cycle++;
     }
 
     public void step() {
@@ -79,7 +85,7 @@ public final class Nes {
         cpu.reset();
         ppu.reset();
         apu.reset();
-        clockCounter = 0;
+        cycle = 0;
     }
 
 }

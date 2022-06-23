@@ -147,7 +147,9 @@ public final class Ppu {
     }
 
     public byte cpuRead(int address) {
-        return (byte) switch (address & 0x07) {
+        int register = address & 0x07;
+
+        return (byte) switch (register) {
             case 2 -> {
                 latch = false;
                 yield ppuStatus;
@@ -158,14 +160,15 @@ public final class Ppu {
                 ppuAddr += addressIncrement();
                 yield result;
             }
-            default -> throw new IllegalArgumentException("Invalid register: " + (address & 0x07));
+            default -> throw new IllegalArgumentException("Invalid register: " + (register));
         };
     }
 
     public void cpuWrite(int address, byte data) {
+        int register = address & 0x07;
         int value = Byte.toUnsignedInt(data);
 
-        switch (address & 0x07) {
+        switch (register) {
             case 0 -> ppuCtrl = value;
             case 1 -> ppuMask = value;
             case 2 -> {
@@ -173,7 +176,7 @@ public final class Ppu {
             case 3 -> oamAddr = value;
             case 4 -> {
                 oam[oamAddr] = data;
-                oamAddr = (oamAddr + addressIncrement()) & 0xFF;
+                oamAddr = (oamAddr + 1) & 0xFF;
             }
             case 5 -> {
                 if (!latch) {
