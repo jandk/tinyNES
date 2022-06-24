@@ -42,6 +42,7 @@ public class FxUi extends Application {
     private Canvas canvas;
     private Image image;
     private Nes nes;
+    private boolean nesEnabled = true;
 
 
     @Override
@@ -104,8 +105,27 @@ public class FxUi extends Application {
     }
 
     private void update(long now) {
-        if (nes != null) {
-            nes.runFrame();
+        if (nes != null & nesEnabled) {
+            try {
+                nes.runFrame();
+            } catch (Exception e) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Error");
+                alert.setHeaderText(e.getMessage());
+
+                try (StringWriter sw = new StringWriter(); PrintWriter pw = new PrintWriter(sw)) {
+                    e.printStackTrace(pw);
+                    alert.setContentText(sw.toString());
+                } catch (IOException ex) {
+                    throw new UncheckedIOException(ex);
+                }
+
+                nesEnabled = false;
+
+                alert.getDialogPane().setMinWidth(800);
+                alert.getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
+                alert.show();
+            }
             nes.ppu().draw(frameBuffer);
             convertFrameBuffer(frameBuffer);
             GraphicsContext gc = canvas.getGraphicsContext2D();
@@ -139,6 +159,7 @@ public class FxUi extends Application {
 
     private void loadRom(Path path) {
         nes = new Nes(new Cartridge(Rom.load(path)));
+        nesEnabled = true;
     }
 
 }
