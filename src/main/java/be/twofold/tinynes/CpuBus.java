@@ -82,7 +82,10 @@ public final class CpuBus implements Bus {
                 return;
             }
             if (address == 0x4016) {
-                controller1.latch();
+                if ((value & 0x01) != 0) {
+                    controller1.latch();
+                    controller2.latch();
+                }
                 return;
             }
             System.err.println("Write to IO: " + Util.hex4(address) + " -- " + Util.hex2(value));
@@ -94,7 +97,7 @@ public final class CpuBus implements Bus {
             return;
         }
 
-        throw new IllegalArgumentException("Illegal CPU write to $" + Integer.toHexString(address));
+        throw new IllegalArgumentException("Illegal CPU write: $" + Integer.toHexString(address));
     }
 
 }

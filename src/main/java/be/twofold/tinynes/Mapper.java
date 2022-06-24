@@ -20,13 +20,8 @@ public abstract class Mapper {
 
     abstract void reset();
 
-    IllegalArgumentException illegalRead(int address) {
-        return new IllegalArgumentException("Invalid read from address " + Util.hex4(address));
-    }
-
     IllegalArgumentException illegalWrite(int address, byte value) {
-        return new IllegalArgumentException(
-            String.format("Invalid write to address $%04X with value $%02X", address, value));
+        return new IllegalArgumentException("Invalid write: " + Util.hex4(address));
     }
 
     enum Mirror {
