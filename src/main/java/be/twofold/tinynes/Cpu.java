@@ -64,7 +64,7 @@ public final class Cpu {
         y = 0;
         sp = 0xFD;
         setPc((hi << 8) | lo);
-        st = 0x16;
+        st = 0x34;
     }
 
     public void irq() {
@@ -76,9 +76,8 @@ public final class Cpu {
         push(pc & 0xFF);
 
         setB(false);
-        setU(true);
         setI(true);
-        push(st);
+        push(getSt());
 
         int lo = read(0xFFFE);
         int hi = read(0xFFFF);
@@ -92,9 +91,8 @@ public final class Cpu {
         push(pc & 0xFF);
 
         setB(false);
-        setU(true);
         setI(true);
-        push(st);
+        push(getSt());
 
         int lo = read(0xFFFA);
         int hi = read(0xFFFB);
@@ -131,7 +129,7 @@ public final class Cpu {
     }
 
     public int getSt() {
-        return st;
+        return st | 0x20;
     }
 
     public void setSt(int st) {
@@ -163,10 +161,6 @@ public final class Cpu {
         return (st & 0x10) != 0;
     }
 
-    public boolean getU() {
-        return (st & 0x20) != 0;
-    }
-
     public boolean getV() {
         return (st & 0x40) != 0;
     }
@@ -193,10 +187,6 @@ public final class Cpu {
 
     public void setB(boolean value) {
         st = value ? st | 0x10 : st & 0xef;
-    }
-
-    public void setU(boolean value) {
-        st = value ? st | 0x20 : st & 0xdf;
     }
 
     public void setV(boolean value) {
@@ -617,7 +607,7 @@ public final class Cpu {
         push(pc >> 8);
         push(pc & 0xff);
         setB(true);
-        push(st);
+        push(getSt());
         setB(false);
         setPc(read(0xfffe) << 8 | read(0xffff));
     }
@@ -762,7 +752,7 @@ public final class Cpu {
     }
 
     private void php() {
-        push(st | 0x30);
+        push(getSt() | 0x30);
     }
 
     private void pla() {
@@ -773,7 +763,6 @@ public final class Cpu {
     private void plp() {
         st = pop();
         setB(false);
-        setU(true);
     }
 
     private void rol(int address) {

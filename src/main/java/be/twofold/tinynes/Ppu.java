@@ -3,6 +3,7 @@ package be.twofold.tinynes;
 public final class Ppu {
 
     // Palette
+    private final byte[] frame = new byte[256 * 240];
     private final byte[] oam = new byte[0x100];
     private final PpuBus bus;
 
@@ -149,10 +150,12 @@ public final class Ppu {
     public byte cpuRead(int address) {
         int register = address & 0x07;
 
-        return (byte) switch (register) {
+        return switch (register) {
             case 2 -> {
+                byte result = (byte) (ppuStatus & 0xE0);
                 latch = false;
-                yield ppuStatus;
+                verticalBlank(false);
+                yield result;
             }
             case 4 -> oam[oamAddr];
             case 7 -> {
@@ -174,31 +177,37 @@ public final class Ppu {
             case 2 -> {
             }
             case 3 -> oamAddr = value;
-            case 4 -> {
-                oam[oamAddr] = data;
-                oamAddr = (oamAddr + 1) & 0xFF;
-            }
-            case 5 -> {
-                if (!latch) {
-                    ppuScrollX = Byte.toUnsignedInt(data);
-                } else {
-                    ppuScrollY = Byte.toUnsignedInt(data);
-                }
-                latch = !latch;
-            }
-            case 6 -> {
-                if (!latch) {
-                    ppuAddrTemp = (data & 0xFF) << 8;
-                } else {
-                    ppuAddrTemp |= data & 0xFF;
-                    ppuAddr = ppuAddrTemp;
-                }
-                latch = !latch;
-            }
+            case 4 -> writeOamData(data);
+            case 5 -> writePpuScroll(data);
+            case 6 -> writePpuAddr(data);
             case 7 -> writePpuData(data);
             default ->
                 throw new UnsupportedOperationException("Writing to PPU " + Util.hex4(address) + ": " + Util.hex2(data));
         }
+    }
+
+    private void writeOamData(byte value) {
+        oam[oamAddr] = value;
+        oamAddr = (oamAddr + 1) & 0xFF;
+    }
+
+    private void writePpuScroll(byte value) {
+        if (!latch) {
+            ppuScrollX = Byte.toUnsignedInt(value);
+        } else {
+            ppuScrollY = Byte.toUnsignedInt(value);
+        }
+        latch = !latch;
+    }
+
+    private void writePpuAddr(byte value) {
+        if (!latch) {
+            ppuAddrTemp = Byte.toUnsignedInt(value) << 8;
+        } else {
+            ppuAddrTemp |= Byte.toUnsignedInt(value);
+            ppuAddr = ppuAddrTemp;
+        }
+        latch = !latch;
     }
 
     private void writePpuData(byte value) {
@@ -249,7 +258,7 @@ public final class Ppu {
         pi >>= (x & 0x02);
         pi &= 0x03;
         for (int r = 0, ro = y * (8 * 256); r < 8; r++, ro += 256) {
-            int tileLsb = Byte.toUnsignedInt(bus.read(backgroundTable() + (offset + r + 0)));
+            int tileLsb = Byte.toUnsignedInt(bus.read(backgroundTable() + (offset + r)));
             int tileMsb = Byte.toUnsignedInt(bus.read(backgroundTable() + (offset + r + 8)));
             int tileInt = interleave(tileLsb, tileMsb);
             for (int c = 0, co = x * 8; c < 8; c++, co++) {
@@ -285,7 +294,7 @@ public final class Ppu {
         for (int r = 0; r < 8; r++) {
             int rr = flipY ? 7 - r : r;
             int ro = (y + rr) * 256;
-            int tileLsb = Byte.toUnsignedInt(bus.read(offset + rr + 0));
+            int tileLsb = Byte.toUnsignedInt(bus.read(offset + rr));
             int tileMsb = Byte.toUnsignedInt(bus.read(offset + rr + 8));
             int tileInt = interleave(tileLsb, tileMsb);
             for (int c = 0; c < 8; c++) {

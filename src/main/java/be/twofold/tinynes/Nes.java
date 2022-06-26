@@ -75,10 +75,16 @@ public final class Nes {
     }
 
     public void runFrame() {
-        clock();
-        while (ppu.row != 0 || ppu.col != 0) {
+        do {
             clock();
-        }
+        } while (ppu.row != 0 || ppu.col != 0);
+
+//        System.out.println("------------------------------");
+//        byte[] table = ppuBus.nameTable;
+//        String nameTable = new String(table, StandardCharsets.US_ASCII);
+//        for (int i = 0; i < nameTable.length() / 2; i += 32) {
+//            System.out.println(nameTable.substring(i, i + 32));
+//        }
     }
 
     public void reset() {

@@ -57,13 +57,10 @@ class CpuTest {
 
         List<Integer> pcs = new ArrayList<>();
         // for (int i = 0; i < 1000; i++) {
-        while (true) {
+        do {
             pcs.add(nes.cpu().pc);
             nes.step();
-            if (nes.cpu().pc == 0xEA5A) {
-                break;
-            }
-        }
+        } while (nes.cpu().pc != 0xEA5A);
 
         // ImageIO.write(nes.getPpu().drawBackground(0, 0), "png", new File("C:\\Temp\\bg-0-0.png"));
 
