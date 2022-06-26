@@ -28,9 +28,9 @@ public final class Cpu {
     int a;  // Accumulator
     int x;  // X index register
     int y;  // Y index register
-    int sp; // Stack pointer
+    int s;  // Stack pointer
+    int p;  // Status register
     int pc; // Program counter
-    int st; // Status register
     int cycles; // Cycles since last instruction
     boolean enabled = true;
 
@@ -62,9 +62,9 @@ public final class Cpu {
         a = 0;
         x = 0;
         y = 0;
-        sp = 0xFD;
+        s = 0xFD;
         setPc((hi << 8) | lo);
-        st = 0x34;
+        p = 0x34;
     }
 
     public void irq() {
@@ -77,7 +77,7 @@ public final class Cpu {
 
         setB(false);
         setI(true);
-        push(getSt());
+        push(getP());
 
         int lo = read(0xFFFE);
         int hi = read(0xFFFF);
@@ -92,7 +92,7 @@ public final class Cpu {
 
         setB(false);
         setI(true);
-        push(getSt());
+        push(getP());
 
         int lo = read(0xFFFA);
         int hi = read(0xFFFB);
@@ -118,9 +118,9 @@ public final class Cpu {
         this.y = y;
     }
 
-    public void setSp(int sp) {
-        assert 0x00 <= sp && sp <= 0xFF;
-        this.sp = sp;
+    public void setS(int s) {
+        assert 0x00 <= s && s <= 0xFF;
+        this.s = s;
     }
 
     public void setPc(int pc) {
@@ -128,13 +128,13 @@ public final class Cpu {
         this.pc = pc;
     }
 
-    public int getSt() {
-        return st | 0x20;
+    public int getP() {
+        return p | 0x20;
     }
 
-    public void setSt(int st) {
-        assert 0x00 <= st && st <= 0xFF;
-        this.st = st;
+    public void setP(int p) {
+        assert 0x00 <= p && p <= 0xFF;
+        this.p = p;
     }
 
     // endregion
@@ -142,59 +142,59 @@ public final class Cpu {
     // region Flags
 
     public boolean getC() {
-        return (st & 0x01) != 0;
+        return (p & 0x01) != 0;
     }
 
     public boolean getZ() {
-        return (st & 0x02) != 0;
+        return (p & 0x02) != 0;
     }
 
     public boolean getI() {
-        return (st & 0x04) != 0;
+        return (p & 0x04) != 0;
     }
 
     public boolean getD() {
-        return (st & 0x08) != 0;
+        return (p & 0x08) != 0;
     }
 
     public boolean getB() {
-        return (st & 0x10) != 0;
+        return (p & 0x10) != 0;
     }
 
     public boolean getV() {
-        return (st & 0x40) != 0;
+        return (p & 0x40) != 0;
     }
 
     public boolean getN() {
-        return (st & 0x80) != 0;
+        return (p & 0x80) != 0;
     }
 
     public void setC(boolean value) {
-        st = value ? st | 0x01 : st & 0xfe;
+        p = value ? p | 0x01 : p & 0xfe;
     }
 
     public void setZ(boolean value) {
-        st = value ? st | 0x02 : st & 0xfd;
+        p = value ? p | 0x02 : p & 0xfd;
     }
 
     public void setI(boolean value) {
-        st = value ? st | 0x04 : st & 0xfb;
+        p = value ? p | 0x04 : p & 0xfb;
     }
 
     public void setD(boolean value) {
-        st = value ? st | 0x08 : st & 0xf7;
+        p = value ? p | 0x08 : p & 0xf7;
     }
 
     public void setB(boolean value) {
-        st = value ? st | 0x10 : st & 0xef;
+        p = value ? p | 0x10 : p & 0xef;
     }
 
     public void setV(boolean value) {
-        st = value ? st | 0x40 : st & 0xbf;
+        p = value ? p | 0x40 : p & 0xbf;
     }
 
     public void setN(boolean value) {
-        st = value ? st | 0x80 : st & 0x7f;
+        p = value ? p | 0x80 : p & 0x7f;
     }
 
     // endregion
@@ -607,7 +607,7 @@ public final class Cpu {
         push(pc >> 8);
         push(pc & 0xff);
         setB(true);
-        push(getSt());
+        push(getP());
         setB(false);
         setPc(read(0xfffe) << 8 | read(0xffff));
     }
@@ -752,7 +752,7 @@ public final class Cpu {
     }
 
     private void php() {
-        push(getSt() | 0x30);
+        push(getP() | 0x30);
     }
 
     private void pla() {
@@ -761,7 +761,7 @@ public final class Cpu {
     }
 
     private void plp() {
-        st = pop();
+        p = pop();
         setB(false);
     }
 
@@ -796,7 +796,7 @@ public final class Cpu {
     }
 
     private void rti() {
-        st = pop() & 0xcf;
+        p = pop() & 0xcf;
         int lo = pop();
         int hi = pop();
         setPc((hi << 8) | lo);
@@ -854,7 +854,7 @@ public final class Cpu {
     }
 
     private void tsx() {
-        x = sp;
+        x = s;
         setZN(x);
     }
 
@@ -864,7 +864,7 @@ public final class Cpu {
     }
 
     private void txs() {
-        sp = x;
+        s = x;
     }
 
     private void tya() {
@@ -928,13 +928,13 @@ public final class Cpu {
     }
 
     private void push(int value) {
-        write(0x0100 + sp, value);
-        sp = (sp - 1) & 0xff;
+        write(0x0100 + s, value);
+        s = (s - 1) & 0xff;
     }
 
     private int pop() {
-        sp = (sp + 1) & 0xff;
-        return read(0x0100 + sp);
+        s = (s + 1) & 0xff;
+        return read(0x0100 + s);
     }
 
     // endregion
@@ -945,7 +945,7 @@ public final class Cpu {
             "a=" + Util.hex2(a) + ", " +
             "x=" + Util.hex2(x) + ", " +
             "y=" + Util.hex2(y) + ", " +
-            "sp=" + Util.hex4(sp) + ", " +
+            "sp=" + Util.hex4(s) + ", " +
             "pc=" + Util.hex4(pc) +
             ")";
     }
