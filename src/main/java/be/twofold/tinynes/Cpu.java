@@ -517,12 +517,14 @@ public final class Cpu {
     // region Opcodes
 
     private void adc(int address) {
-        int v1 = a;
-        int v2 = read(address);
-        int t = v1 + v2 + (getC() ? 1 : 0);
-        a = t & 0xFF;
-        setC(t > 0xFF);
-        setV(((v1 ^ t) & (v2 ^ t) & 0x80) != 0);
+        add(a, read(address));
+    }
+
+    private void add(int v1, int v2) {
+        int temp = v1 + v2 + (getC() ? 1 : 0);
+        setC(temp > 0xFF);
+        setV(((v1 ^ temp) & (v2 ^ temp) & 0x80) != 0);
+        a = temp & 0xFF;
         setZN(a);
     }
 
@@ -532,18 +534,18 @@ public final class Cpu {
     }
 
     private void asl(int address) {
-        int f = read(address);
-        setC((f & 0x80) != 0);
-        int t = (f << 1) & 0xFF;
-        setZN(t);
-        write(address, t);
+        write(address, asl0(read(address)));
     }
 
     private void asla() {
-        setC((a & 0x80) != 0);
-        int t = (a << 1) & 0xFF;
-        setZN(t);
-        a = t;
+        a = asl0(a);
+    }
+
+    private int asl0(int value) {
+        int temp = (value << 1) & 0xFF;
+        setC((value & 0x80) != 0);
+        setZN(temp);
+        return temp;
     }
 
     private void bcc(int address) {
@@ -608,41 +610,40 @@ public final class Cpu {
     }
 
     private void cmp(int address) {
-        int f = read(address);
-        int t = a - f;
-        setC(a >= f);
-        setZN(t);
+        cmp0(address, a);
     }
 
     private void cpx(int address) {
-        int f = read(address);
-        int t = x - f;
-        setC(x >= f);
-        setZN(t);
+        cmp0(address, x);
     }
 
     private void cpy(int address) {
-        int f = read(address);
-        int t = y - f;
-        setC(y >= f);
-        setZN(t);
+        cmp0(address, y);
+    }
+
+    private void cmp0(int address, int reg) {
+        int fetched = read(address);
+        int temp = reg - fetched;
+        setC(reg >= fetched);
+        setZN(temp);
     }
 
     private void dec(int address) {
-        int f = read(address);
-        int t = (f - 1) & 0xFF;
-        setZN(t);
-        write(address, t);
+        write(address, dec0(read(address)));
     }
 
     private void dex() {
-        x = (x - 1) & 0xFF;
-        setZN(x);
+        x = dec0(x);
     }
 
     private void dey() {
-        y = (y - 1) & 0xFF;
-        setZN(y);
+        y = dec0(y);
+    }
+
+    private int dec0(int value) {
+        int temp = (value - 1) & 0xFF;
+        setZN(temp);
+        return temp;
     }
 
     private void eor(int address) {
@@ -651,20 +652,21 @@ public final class Cpu {
     }
 
     private void inc(int address) {
-        int f = read(address);
-        int t = (f + 1) & 0xFF;
-        setZN(t);
-        write(address, t);
+        write(address, inc0(read(address)));
     }
 
     private void inx() {
-        x = (x + 1) & 0xFF;
-        setZN(x);
+        x = inc0(x);
     }
 
     private void iny() {
-        y = (y + 1) & 0xFF;
-        setZN(y);
+        y = inc0(y);
+    }
+
+    private int inc0(int value) {
+        int temp = (value + 1) & 0xFF;
+        setZN(temp);
+        return temp;
     }
 
     private void jmp(int address) {
@@ -677,33 +679,36 @@ public final class Cpu {
     }
 
     private void lda(int address) {
-        a = read(address);
-        setZN(a);
+        a = ld0(address);
     }
 
     private void ldx(int address) {
-        x = read(address);
-        setZN(x);
+        x = ld0(address);
     }
 
     private void ldy(int address) {
-        y = read(address);
-        setZN(y);
+        y = ld0(address);
+    }
+
+    private int ld0(int address) {
+        int temp = read(address);
+        setZN(temp);
+        return temp;
     }
 
     private void lsr(int address) {
-        int f = read(address);
-        setC((f & 0x01) != 0);
-        int t = f >>> 1;
-        setZN(t);
-        write(address, t);
+        write(address, lsr0(read(address)));
     }
 
     private void lsra() {
-        setC((a & 0x01) != 0);
-        int t = a >>> 1;
-        setZN(t);
-        a = t;
+        a = lsr0(a);
+    }
+
+    private int lsr0(int value) {
+        int temp = value >>> 1;
+        setC((value & 0x01) != 0);
+        setZN(temp);
+        return temp;
     }
 
     private void nop() {
@@ -733,33 +738,33 @@ public final class Cpu {
     }
 
     private void rol(int address) {
-        int f = read(address);
-        int t = (f << 1) | (getC() ? 0x01 : 0x00);
-        setC((f & 0x80) != 0);
-        setZN(t);
-        write(address, t & 0xFF);
+        write(address, rol0(read(address)));
     }
 
     private void rola() {
-        int t = (a << 1) | (getC() ? 0x01 : 0x00);
-        setC((a & 0x80) != 0);
-        setZN(t);
-        a = t & 0xFF;
+        a = rol0(a);
+    }
+
+    private int rol0(int value) {
+        int temp = ((value << 1) | (getC() ? 0x01 : 0x00)) & 0xFF;
+        setC((value & 0x80) != 0);
+        setZN(temp);
+        return temp;
     }
 
     private void ror(int address) {
-        int f = read(address);
-        int t = (f >>> 1) | (getC() ? 0x80 : 0x00);
-        setC((f & 0x01) != 0);
-        setZN(t);
-        write(address, t);
+        write(address, ror0(read(address)));
     }
 
     private void rora() {
-        int t = (a >>> 1) | (getC() ? 0x80 : 0x00);
-        setC((a & 0x01) != 0);
-        setZN(t);
-        a = t;
+        a = ror0(a);
+    }
+
+    private int ror0(int value) {
+        int temp = (value >>> 1) | (getC() ? 0x80 : 0x00);
+        setC((value & 0x01) != 0);
+        setZN(temp);
+        return temp;
     }
 
     private void rti() {
@@ -772,13 +777,7 @@ public final class Cpu {
     }
 
     private void sbc(int address) {
-        int v1 = a;
-        int v2 = read(address) ^ 0xFF;
-        int t = v1 + v2 + (getC() ? 1 : 0);
-        a = t & 0xFF;
-        setC(t > 0xFF);
-        setV(((v1 ^ t) & (v2 ^ t) & 0x80) != 0);
-        setZN(a);
+        add(a, read(address) ^ 0xFF);
     }
 
     private void sec() {
