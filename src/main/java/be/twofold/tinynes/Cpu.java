@@ -60,8 +60,8 @@ public final class Cpu {
         x = 0;
         y = 0;
         s = 0xFD;
-        p = 0x34;
-        setPc(read16(0xFFFC));
+        p = 0x04;
+        pc = read16(0xFFFC);
     }
 
     public void irq() {
@@ -71,11 +71,10 @@ public final class Cpu {
 
         push16(pc);
 
-        setB(false);
         setI(true);
-        push(getP());
+        push(p | 0x20);
 
-        setPc(read16(0xFFFE));
+        pc = read16(0xFFFE);
 
         cycles = 7;
     }
@@ -83,52 +82,13 @@ public final class Cpu {
     public void nmi() {
         push16(pc);
 
-        setB(false);
         setI(true);
-        push(getP());
+        push(p | 0x20);
 
-        setPc(read16(0xFFFA));
+        pc = read16(0xFFFA);
 
         cycles = 8;
     }
-
-    // region Getters and Setters
-
-    public void setA(int a) {
-        assert 0x00 <= a && a <= 0xFF;
-        this.a = a;
-    }
-
-    public void setX(int x) {
-        assert 0x00 <= x && x <= 0xFF;
-        this.x = x;
-    }
-
-    public void setY(int y) {
-        assert 0x00 <= y && y <= 0xFF;
-        this.y = y;
-    }
-
-    public void setS(int s) {
-        assert 0x00 <= s && s <= 0xFF;
-        this.s = s;
-    }
-
-    public void setPc(int pc) {
-        assert 0x0000 <= pc && pc <= 0xFFFF;
-        this.pc = pc;
-    }
-
-    public int getP() {
-        return p | 0x20;
-    }
-
-    public void setP(int p) {
-        assert 0x00 <= p && p <= 0xFF;
-        this.p = p;
-    }
-
-    // endregion
 
     // region Flags
 
@@ -174,10 +134,6 @@ public final class Cpu {
 
     public void setD(boolean value) {
         p = value ? p | 0x08 : p & 0xF7;
-    }
-
-    public void setB(boolean value) {
-        p = value ? p | 0x10 : p & 0xEF;
     }
 
     public void setV(boolean value) {
@@ -581,8 +537,8 @@ public final class Cpu {
 
     private void brk() {
         push16(++pc);
-        push(getP() | 0x10);
-        setPc(read16(0xFFFE));
+        push(p | 0x30);
+        pc = read16(0xFFFE);
     }
 
     private void bvc(int address) {
@@ -670,12 +626,12 @@ public final class Cpu {
     }
 
     private void jmp(int address) {
-        setPc(address);
+        pc = address;
     }
 
     private void jsr(int address) {
         push16(--pc);
-        setPc(address);
+        pc = address;
     }
 
     private void lda(int address) {
@@ -724,7 +680,7 @@ public final class Cpu {
     }
 
     private void php() {
-        push(getP() | 0x30);
+        push(p | 0x30);
     }
 
     private void pla() {
@@ -733,8 +689,7 @@ public final class Cpu {
     }
 
     private void plp() {
-        p = pop();
-        setB(false);
+        p = pop() & 0xCF;
     }
 
     private void rol(int address) {
@@ -769,11 +724,11 @@ public final class Cpu {
 
     private void rti() {
         p = pop() & 0xCF;
-        setPc(pop16());
+        pc = pop16();
     }
 
     private void rts() {
-        setPc(pop16() + 1);
+        pc = pop16() + 1;
     }
 
     private void sbc(int address) {
@@ -883,7 +838,7 @@ public final class Cpu {
 
     private void branch(boolean condition, int address) {
         if (condition) {
-            setPc(address);
+            pc = address;
             cycles++;
         }
     }

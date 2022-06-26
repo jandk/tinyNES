@@ -14,8 +14,8 @@ class CpuTest {
     @Test
     void testWithNesTest() {
         Nes nes = load("/nestest.nes");
-        nes.cpu().setPc(0xC000);
-        nes.cpu().setP(0x24);
+        nes.cpu().p = 0x04;
+        nes.cpu().pc = 0xC000;
         nes.cpu().totalCycles = 7;
 
         List<State> states = readResults();
@@ -89,7 +89,7 @@ class CpuTest {
         assertValue(cpu.pc, state.pc(), i, "PC");
         // assertValue(cpu.totalCycles, state.cycles(), i, "cycles");
 
-        int actual = cpu.getP() & 0xdf; // Ignore bit 5
+        int actual = cpu.p;
         int expected = state.status() & 0xdf; // Ignore bit 5
         assertThat(actual)
             .withFailMessage(() -> "Line " + (i + 1) + " -- Expected flags " + dumpFlags(expected) + " but was " + dumpFlags(actual) + " at " + Integer.toHexString(state.pc()))
