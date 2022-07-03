@@ -9,11 +9,13 @@ public final class Rom {
     private final int mapperId;
     private final byte[] prg;
     private final byte[] chr;
+    private final MirroringMode mirroringMode;
 
-    public Rom(int mapperId, byte[] prg, byte[] chr) {
+    public Rom(int mapperId, byte[] prg, byte[] chr, MirroringMode mirroringMode1) {
         this.mapperId = mapperId;
         this.prg = prg;
         this.chr = chr;
+        this.mirroringMode = mirroringMode1;
     }
 
     public static Rom load(InputStream in) {
@@ -44,6 +46,10 @@ public final class Rom {
         return chr;
     }
 
+    public MirroringMode getMirroringMode() {
+        return mirroringMode;
+    }
+
     private static final class Parser {
         private static final byte[] Magic = {'N', 'E', 'S', 0x1A};
 
@@ -66,6 +72,8 @@ public final class Rom {
             int flags10 = read();
             in.skipNBytes(5);
 
+            MirroringMode mirroringMode = (flags6 & 0x01) == 0 ? MirroringMode.HORIZONTAL : MirroringMode.VERTICAL;
+
             if ((flags6 & 0x04) != 0) {
                 read(0x200);
             }
@@ -73,7 +81,7 @@ public final class Rom {
             int mapperId = (flags7 & 0xF0) | (flags6 >> 4);
             byte[] prg = read(prgSize * 0x4000);
             byte[] chr = read(chrSize * 0x2000);
-            return new Rom(mapperId, prg, chr);
+            return new Rom(mapperId, prg, chr, mirroringMode);
         }
 
         private int read() throws IOException {

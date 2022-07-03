@@ -7,6 +7,7 @@ public final class Cartridge {
     private final byte[] chr;
     private final byte[] prgRam;
     private final byte[] chrRam;
+    private final MirroringMode mirroringMode;
 
     public Cartridge(Rom rom) {
         int prgBanks = rom.getPrg().length / 0x4000;
@@ -15,7 +16,8 @@ public final class Cartridge {
         this.prg = rom.getPrg();
         this.chr = rom.getChr();
         this.prgRam = createPrgRam(rom.getMapperId());
-        this.chrRam = chrBanks == 0 ? new byte[0x1000] : null;
+        this.chrRam = chrBanks == 0 ? new byte[0x2000] : null;
+        this.mirroringMode = rom.getMirroringMode();
     }
 
     private static Mapper createMapper(int mapperId, int prgBanks, int chrBanks) {
@@ -24,6 +26,10 @@ public final class Cartridge {
             case 1 -> new Mapper001(prgBanks, chrBanks);
             default -> throw new IllegalArgumentException("Unknown mapper: " + mapperId);
         };
+    }
+
+    public MirroringMode getMirroringMode() {
+        return mirroringMode;
     }
 
     private byte[] createPrgRam(int mapperId) {
@@ -50,15 +56,19 @@ public final class Cartridge {
     }
 
     public byte ppuRead(int address) {
-        if (chrRam != null && address >= 0x0000 && address <= 0x1FFF) {
-            return chrRam[address & 0x0FFF];
+        assert address >= 0x0000 && address <= 0x1FFF;
+
+        if (chrRam != null) {
+            return chrRam[address & 0x1FFF];
         }
         return chr[mapper.ppuRead(address)];
     }
 
     public void ppuWrite(int address, byte value) {
-        if (chrRam != null && address >= 0x0000 && address <= 0x1FFF) {
-            chrRam[address & 0x0FFF] = value;
+        assert address >= 0x0000 && address <= 0x1FFF;
+
+        if (chrRam != null) {
+            chrRam[address & 0x1FFF] = value;
             return;
         }
         mapper.ppuWrite(address, value);

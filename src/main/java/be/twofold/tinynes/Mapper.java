@@ -24,11 +24,4 @@ public abstract class Mapper {
         return new IllegalArgumentException("Invalid write: " + Util.hex4(address));
     }
 
-    enum Mirror {
-        HORIZONTAL,
-        VERTICAL,
-        ONE_SCREEN_LO,
-        ONE_SCREEN_HI
-    }
-
 }

@@ -17,12 +17,12 @@ public final class Mapper001 extends Mapper {
 
     // region Properties
 
-    private Mirror mirroring() {
+    private MirroringMode mirroring() {
         return switch (control & 0x03) {
-            case 0 -> Mirror.HORIZONTAL;
-            case 1 -> Mirror.VERTICAL;
-            case 2 -> Mirror.ONE_SCREEN_LO;
-            case 3 -> Mirror.ONE_SCREEN_HI;
+            case 0 -> MirroringMode.HORIZONTAL;
+            case 1 -> MirroringMode.VERTICAL;
+            case 2 -> MirroringMode.ONE_SCREEN_LO;
+            case 3 -> MirroringMode.ONE_SCREEN_HI;
             default -> throw new IllegalStateException("Unexpected value: " + (control & 0x03));
         };
     }
@@ -115,22 +115,20 @@ public final class Mapper001 extends Mapper {
         if (chrBanks == 0) {
             return address;
         }
-        if (chrBankMode()) {
+        if ((control & 0b10000) != 0) {
             if (address <= 0x0FFF) {
-                return (select4Lo << 12) | (address & 0x0FFF);
+                return select4Lo * 0x1000 + (address & 0x0FFF);
             }
-
-            return (select4Hi << 12) | (address & 0x0FFF);
-        } else {
-            return (select8 << 13) | (address & 0x1FFF);
+            return select4Hi * 0x1000 + (address & 0x0FFF);
         }
+        return select8 * 0x2000 + (address & 0x1FFF);
     }
 
     @Override
     void ppuWrite(int address, byte value) {
         assert address >= 0x0000 && address <= 0x1FFF;
 
-        throw illegalWrite(address, value);
+        // throw illegalWrite(address, value);
     }
 
     @Override

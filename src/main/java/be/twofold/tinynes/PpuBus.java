@@ -19,11 +19,11 @@ public final class PpuBus implements Bus {
         }
 
         if (address <= 0x3EFF) {
-            return nameTable[address & 0x07FF];
+            return nameTable[nameTableAddress(address)];
         }
 
         if (address <= 0x3FFF) {
-            return palette[address & 0x001F];
+            return palette[paletteAddress(address)];
         }
 
         throw new IllegalArgumentException("Illegal PPU read: $" + Integer.toHexString(address));
@@ -39,24 +39,31 @@ public final class PpuBus implements Bus {
         }
 
         if (address <= 0x3EFF) {
-            nameTable[address & 0x07FF] = value;
+            nameTable[nameTableAddress(address)] = value;
             return;
         }
 
         if (address <= 0x3FFF) {
-            int masked = address & 0x1F;
-            int newAddress = switch (masked) {
-                case 0x0010 -> 0x0000;
-                case 0x0014 -> 0x0004;
-                case 0x0018 -> 0x0008;
-                case 0x001C -> 0x000C;
-                default -> masked;
-            };
-            palette[newAddress] = value;
+            palette[paletteAddress(address)] = value;
             return;
         }
 
         throw new IllegalArgumentException("Illegal PPU write: $" + Integer.toHexString(address));
+    }
+
+    private int nameTableAddress(int address) {
+        return switch (cartridge.getMirroringMode()) {
+            case VERTICAL -> address & 0x7FF;
+            case HORIZONTAL -> (address >>> 1) & 0x0400 | address & 0x03FF;
+            default -> address & ~0x2000;
+        };
+    }
+
+    private int paletteAddress(int address) {
+        if ((address & 0x13) == 0x10) {
+            address &= ~0x10;
+        }
+        return address & 0x1F;
     }
 
 }
