@@ -232,7 +232,7 @@ public final class Ppu {
     private int bgAttrShifter;
 
     private void updateBackground() {
-        if ((col >= 1 && col <= 257) || (col >= 321 && col <= 337)) {
+        if ((col >= 1 && col <= 257) || (col >= 321 && col <= 336)) {
             updateShifters();
 
             switch ((col - 1) & 0x07) {
